@@ -1,0 +1,58 @@
+[package]
+name = "webgpu_book"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytemuck = {version = "1.13.1", features = ["derive"]}
+cgmath = "0.18.0"
+pollster = "0.3.0"
+raw-window-handle = "0.5.2"
+wgpu = "0.16.1"
+winit = "0.28.6"
+
+[[example]]
+name = "ch01_test01"
+path = "examples/ch01/test01.rs" 
+
+[[example]]
+name = "ch01_test02"
+path = "examples/ch01/test02.rs"
+
+[[example]]
+name = "ch02_first_triangle"
+path = "examples/ch02/first_triangle.rs"
+
+[[example]]
+name = "ch02_triangle_vertex_color"
+path = "examples/ch02/triangle_vertex_color.rs"
+
+[[example]]
+name = "ch03_topology"
+path = "examples/ch03/topology.rs"
+
+[[example]]
+name = "ch04_triangle"
+path = "examples/ch04/triangle.rs"
+
+[[example]]
+name = "ch04_square"
+path = "examples/ch04/square.rs"
+
+[[example]]
+name = "ch04_square_indexed"
+path = "examples/ch04/square_indexed.rs"
+
+[[example]]
+name = "ch04_hexagon"
+path = "examples/ch04/hexagon.rs"
+
+[[example]]
+name = "ch05_math"
+path = "examples/ch05/math.rs"
+
+[[example]]
+name = "ch06_line"
+path = "examples/ch06/line3d.rs"
