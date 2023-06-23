@@ -1,4 +1,4 @@
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+use webgpu_book::{run_wgpu, BufferInfo, RenderConfiguration, WindowConfiguration};
 
 use crate::vertex::Vertex;
 
@@ -20,11 +20,11 @@ const VERTICES: [Vertex; 3] = [
 ];
 
 fn main() {
-    run_wgpu(
+    run_wgpu::<()>(
         &WindowConfiguration {
             title: "Ch4. Triangle",
         },
-        RenderConfiguration  {
+        RenderConfiguration {
             shader_source: include_str!("triangle.wgsl"),
             vertices: VERTICES.len(),
             vertex_buffers: &[Vertex::buffer("Vertices", &VERTICES)],

@@ -1,6 +1,6 @@
 use wgpu::{IndexFormat, PrimitiveTopology};
 
-use webgpu_book::{RenderConfiguration, run_wgpu, WindowConfiguration};
+use webgpu_book::{run_wgpu, RenderConfiguration, WindowConfiguration};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -19,11 +19,11 @@ fn main() {
         _ => panic!("Unknown type {}", primitive_type),
     };
 
-    run_wgpu(
+    run_wgpu::<()>(
         &WindowConfiguration {
             title: &format!("Ch4. Topology: {}", primitive_type),
         },
-        RenderConfiguration  {
+        RenderConfiguration {
             shader_source: include_str!("topology.wgsl"),
             vertices: 6,
             topology,

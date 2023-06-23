@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+use webgpu_book::{run_wgpu, BufferInfo, RenderConfiguration, WindowConfiguration};
 
 use crate::vertex::Vertex;
 
@@ -25,7 +25,6 @@ fn main() {
         });
     }
 
-
     let mut indices = Vec::with_capacity(5 * 3);
     for i in 0..4 {
         indices.push(0);
@@ -33,11 +32,11 @@ fn main() {
         indices.push(i + 2);
     }
 
-    run_wgpu(
+    run_wgpu::<()>(
         &WindowConfiguration {
             title: "Ch4. Hexagon (indexed)",
         },
-        RenderConfiguration  {
+        RenderConfiguration {
             shader_source: include_str!("triangle.wgsl"),
             vertices: indices.len(),
             vertex_buffers: &[Vertex::buffer("Vertices", &vertices[..])],

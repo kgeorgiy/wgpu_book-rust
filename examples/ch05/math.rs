@@ -6,7 +6,7 @@ fn main() {
     show(
         "scaling",
         Matrix4::from_nonuniform_scale(0.5, 0.5, 1.5),
-        Matrix4::from_nonuniform_scale(0.5, 0.5, 1.5) * Matrix4::from_scale(2.0)
+        Matrix4::from_nonuniform_scale(0.5, 0.5, 1.5) * Matrix4::from_scale(2.0),
     );
     show(
         "translation",
@@ -31,5 +31,9 @@ fn show(operation: &str, first: Matrix4<f64>, second: Matrix4<f64>) {
 
     let double = second * first;
     println!("    Double {} matrix: {:?}", operation, double);
-    println!("    Vector after double {}: {:?}", operation, double * my_vec);
+    println!(
+        "    Vector after double {}: {:?}",
+        operation,
+        double * my_vec
+    );
 }
