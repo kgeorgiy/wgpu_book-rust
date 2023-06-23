@@ -2,10 +2,13 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::rc::Rc;
 
-use bytemuck::{cast_slice, Pod};
-use wgpu::{Buffer, BufferUsages, Device, IndexFormat, Queue, VertexAttribute, VertexBufferLayout, VertexStepMode};
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use crate::webgpu::WebGPUDevice;
+use bytemuck::{cast_slice, Pod};
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
+use wgpu::{
+    Buffer, BufferUsages, Device, IndexFormat, Queue, VertexAttribute, VertexBufferLayout,
+    VertexStepMode,
+};
 
 // UntypedBuffer
 
@@ -14,7 +17,6 @@ pub struct UntypedBuffer<F: Clone> {
     pub(crate) buffer: Rc<Buffer>,
     pub(crate) format: F,
 }
-
 
 // BufferWriter
 
@@ -33,7 +35,6 @@ impl<T: Pod> BufferWriter<T> {
     }
 }
 
-
 // TypedBuffer
 
 #[derive(Clone)]
@@ -42,13 +43,11 @@ pub(crate) struct TypedBuffer<T, F: Clone> {
     pub(crate) writer: BufferWriter<T>,
 }
 
-
 // UntypedBufferDescriptor
 
 pub trait UntypedBufferDescriptor<F: Clone> {
     fn create_buffer(&self, device: &Device) -> UntypedBuffer<F>;
 }
-
 
 // TypedBufferDescriptor
 
@@ -96,10 +95,12 @@ impl<'a, T: Pod, F: Clone> UntypedBufferDescriptor<F> for TypedBufferDescriptor<
     }
 }
 
-
 // BufferInfo
 
-pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
+pub trait BufferInfo<F: Clone + 'static>
+where
+    Self: Pod,
+{
     const USAGE: BufferUsages;
     const FORMAT: F;
 
@@ -117,14 +118,16 @@ impl BufferInfo<IndexFormat> for u16 {
     const FORMAT: IndexFormat = IndexFormat::Uint16;
 }
 
-
 // VertexBufferInfo
 
-pub trait VertexBufferInfo where Self: Pod {
+pub trait VertexBufferInfo
+where
+    Self: Pod,
+{
     const ATTRIBUTES: &'static [VertexAttribute];
 }
 
-impl <T: VertexBufferInfo> BufferInfo<VertexBufferLayout<'static>> for T {
+impl<T: VertexBufferInfo> BufferInfo<VertexBufferLayout<'static>> for T {
     const USAGE: BufferUsages = BufferUsages::VERTEX;
     const FORMAT: VertexBufferLayout<'static> = VertexBufferLayout {
         array_stride: size_of::<Self>() as wgpu::BufferAddress,

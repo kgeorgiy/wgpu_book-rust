@@ -1,18 +1,17 @@
 // Content
 
+use std::time::Duration;
+
 pub trait Content {
     fn resize(&mut self, _width: u32, _height: u32) {}
-    fn redraw(&mut self) {}
+    fn update(&mut self, _dt: Duration) {}
 }
-
 
 // NoContent
 
 pub struct NoContent;
 
-impl Content for NoContent {
-}
-
+impl Content for NoContent {}
 
 // CompositeContent
 
@@ -22,7 +21,9 @@ pub struct CompositeContent {
 
 impl<const L: usize> From<[Box<dyn Content>; L]> for CompositeContent {
     fn from(parts: [Box<dyn Content>; L]) -> Self {
-        CompositeContent { parts: parts.into() }
+        CompositeContent {
+            parts: parts.into(),
+        }
     }
 }
 
@@ -33,13 +34,12 @@ impl Content for CompositeContent {
         }
     }
 
-    fn redraw(&mut self) {
+    fn update(&mut self, dt: Duration) {
         for part in &mut self.parts {
-            part.redraw();
+            part.update(dt);
         }
     }
 }
-
 
 // WindowConfiguration
 
@@ -47,9 +47,14 @@ pub struct WindowConfiguration<'a> {
     pub title: &'a str,
 }
 
-
 // RawWindow
 
-pub trait RawWindow: raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle {}
+pub trait RawWindow:
+    raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle
+{
+}
 
-impl<W> RawWindow for W where W: raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle {}
+impl<W> RawWindow for W where
+    W: raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle
+{
+}

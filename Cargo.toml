@@ -54,5 +54,17 @@ name = "ch05_math"
 path = "examples/ch05/math.rs"
 
 [[example]]
-name = "ch06_line"
+name = "ch06_line3d"
 path = "examples/ch06/line3d.rs"
+
+[[example]]
+name = "ch06_cube_face_colors"
+path = "examples/ch06/cube_face_colors.rs"
+
+[[example]]
+name = "ch06_cube_vertex_colors"
+path = "examples/ch06/cube_vertex_colors.rs"
+
+[[example]]
+name = "ch06_cube_rotate_cube"
+path = "examples/ch06/rotate_cube.rs"

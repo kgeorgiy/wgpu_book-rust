@@ -1,10 +1,7 @@
 use cgmath::{Matrix4, Point3, Rad, Vector3};
 
 pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.0,
-    0.0, 0.0, 0.5, 1.0,
+    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
 );
 
 pub fn create_projection(aspect: f32, fovy: Rad<f32>) -> Matrix4<f32> {
@@ -31,7 +28,7 @@ pub fn create_rotation(rotation: [f32; 3]) -> Matrix4<f32> {
 pub fn create_transforms(
     translation: [f32; 3],
     rotation: [f32; 3],
-    scaling: [f32; 3]
+    scaling: [f32; 3],
 ) -> Matrix4<f32> {
     let trans = Matrix4::from_translation(translation.into());
     let rot = create_rotation(rotation);
