@@ -1,4 +1,5 @@
 use wgpu::{IndexFormat, PrimitiveTopology};
+
 use webgpu_book::{RenderConfiguration, run_wgpu, WindowConfiguration};
 
 fn main() {

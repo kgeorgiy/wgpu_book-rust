@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, VertexBufferInfo, WindowConfiguration};
+use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
 
 use crate::vertex::Vertex;
 
@@ -41,8 +41,8 @@ fn main() {
             shader_source: include_str!("triangle.wgsl"),
             vertices: indices.len(),
             vertex_buffers: &[Vertex::buffer("Vertices", &vertices[..])],
-            index_buffer: Some(BufferInfo::buffer("Indices", &indices)),
+            index_buffer: Some(u16::buffer("Indices", &indices)),
             ..RenderConfiguration::default()
         },
-    )
+    );
 }

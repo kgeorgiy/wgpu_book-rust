@@ -1,4 +1,4 @@
-use webgpu_book::{RenderConfiguration, WindowConfiguration, run_wgpu};
+use webgpu_book::{RenderConfiguration, run_wgpu, WindowConfiguration};
 
 pub fn run_example(title: &str, shader_source: &str) -> ! {
     run_wgpu(

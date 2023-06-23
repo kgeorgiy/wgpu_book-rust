@@ -1,4 +1,5 @@
-use webgpu_book::{RenderConfiguration, run_wgpu, WindowConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+
 use crate::vertex::Vertex;
 
 mod vertex;

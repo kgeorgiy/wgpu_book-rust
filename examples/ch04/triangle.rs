@@ -1,10 +1,10 @@
-use webgpu_book::{RenderConfiguration, run_wgpu, VertexBufferInfo, WindowConfiguration};
+use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
 
 use crate::vertex::Vertex;
 
 mod vertex;
 
-const VERTICES: &[Vertex] = &[
+const VERTICES: [Vertex; 3] = [
     Vertex {
         position: [0.0, 0.5],
         color: [1.0, 0.0, 0.0],
@@ -27,7 +27,7 @@ fn main() {
         RenderConfiguration  {
             shader_source: include_str!("triangle.wgsl"),
             vertices: VERTICES.len(),
-            vertex_buffers: &[VertexBufferInfo::buffer("Vertices", VERTICES)],
+            vertex_buffers: &[Vertex::buffer("Vertices", &VERTICES)],
             ..RenderConfiguration::default()
         },
     )

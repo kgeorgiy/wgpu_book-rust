@@ -7,7 +7,8 @@ use winit::{
 };
 use winit::event::VirtualKeyCode::Escape;
 
-use crate::{RawWindow, WindowConfiguration, Content};
+use crate::{WindowConfiguration, Content};
+use crate::window_api::RawWindow;
 
 pub fn show<F>(config: &WindowConfiguration, factory: F) -> !
     where F: FnOnce(&dyn RawWindow) -> Box<dyn Content>
@@ -16,7 +17,7 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> !
     let window = Window::new(&event_loop).expect("Create window");
     window.set_title(config.title);
 
-    let mut contents: Box<dyn Content> = factory(&window);
+    let mut contents = factory(&window);
 
     contents.deref_mut().resize(window.inner_size().width, window.inner_size().height);
     event_loop.run(move |event, _, control_flow| {
