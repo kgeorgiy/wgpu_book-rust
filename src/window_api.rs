@@ -2,9 +2,12 @@
 
 use std::time::Duration;
 
+use winit::event::DeviceEvent;
+
 pub trait Content {
     fn resize(&mut self, _width: u32, _height: u32) {}
     fn update(&mut self, _dt: Duration) {}
+    fn input(&mut self, _event: DeviceEvent) {}
 }
 
 // NoContent
@@ -39,6 +42,12 @@ impl Content for CompositeContent {
             part.update(dt);
         }
     }
+
+    fn input(&mut self, event: DeviceEvent) {
+        for part in &mut self.parts {
+            part.input(event.clone());
+        }
+    }
 }
 
 // WindowConfiguration
@@ -49,12 +58,9 @@ pub struct WindowConfiguration<'a> {
 
 // RawWindow
 
-pub trait RawWindow:
-    raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle
-{
-}
+pub trait RawWindow: raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle
+{}
 
 impl<W> RawWindow for W where
     W: raw_window_handle::HasRawWindowHandle + raw_window_handle::HasRawDisplayHandle
-{
-}
+{}

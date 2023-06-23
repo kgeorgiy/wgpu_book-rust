@@ -1,11 +1,9 @@
-use std::f32::consts::PI;
-
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Matrix4, Rad, SquareMatrix, Vector3};
 use wgpu::{PrimitiveTopology, VertexAttribute};
 
-use state::State;
 use webgpu_book::VertexBufferInfo;
+
+use crate::state::MvpState;
 
 mod state;
 
@@ -36,15 +34,9 @@ fn create_vertices() -> [Vertex; 300] {
 }
 
 fn main() {
-    State::run(
+    MvpState::run(
         "Line",
         include_str!("line3d.wgsl"),
-        (1.5, 1.0, 3.0).into(),
-        (0.0, 0.0, 0.0).into(),
-        Vector3::unit_y(),
-        Rad(2.0 * PI / 5.0),
-        0.0,
-        Matrix4::identity(),
         &create_vertices(),
         PrimitiveTopology::LineStrip,
         None,
