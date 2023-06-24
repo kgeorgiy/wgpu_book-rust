@@ -112,3 +112,32 @@ path = "examples/ch08/cone.rs"
 [[example]]
 name = "ch08_torus"
 path = "examples/ch08/torus.rs"
+
+[[example]]
+name = "ch09_sinc"
+path = "examples/ch09/sinc.rs"
+
+[[example]]
+name = "ch09_peaks"
+path = "examples/ch09/peaks.rs"
+
+[[example]]
+name = "ch09_klein_bottle"
+path = "examples/ch09/klein_bottle.rs"
+
+[[example]]
+name = "ch09_wellenkugel"
+path = "examples/ch09/wellenkugel.rs"
+
+[[example]]
+name = "ch09_seashell"
+path = "examples/ch09/seashell.rs"
+
+[[example]]
+name = "ch09_sievert_enneper"
+path = "examples/ch09/sievert_enneper.rs"
+
+[[example]]
+name = "ch09_breather"
+path = "examples/ch09/breather.rs"
+

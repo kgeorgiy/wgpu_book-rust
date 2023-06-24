@@ -145,7 +145,7 @@ impl<'a> WebGPUContent {
             PrimitiveState {
                 topology: conf.topology,
                 strip_index_format: conf.strip_index_format,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: conf.cull_mode,
                 ..Default::default()
             },
         );

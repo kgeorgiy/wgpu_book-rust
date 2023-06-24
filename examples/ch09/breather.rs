@@ -1,4 +1,5 @@
 use std::f32::consts::PI;
+
 use cgmath::{Point3, point3};
 
 use crate::common::run_parametric_surface;
@@ -13,7 +14,7 @@ mod common;
 pub fn breather(u: f32, v: f32) -> Point3<f32> {
     const A: f32 = 0.4; // where 0 < A < 1
 
-    let aa1 = (1.0 - A * A);
+    let aa1 = 1.0 - A * A;
     let aa1s = aa1.sqrt();
     let au_cosh = (A * u).cosh();
     let au_sinh = (A * u).sinh();

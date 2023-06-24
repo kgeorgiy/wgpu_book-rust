@@ -1,6 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::{ElementWise, InnerSpace, Point3, point3, Vector3};
 use wgpu::VertexAttribute;
+
 use webgpu_book::VertexBufferInfo;
 
 use crate::colormap::{Colormap, ColormapInterpolator};
