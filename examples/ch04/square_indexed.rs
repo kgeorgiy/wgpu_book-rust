@@ -1,6 +1,6 @@
 use std::u16;
 
-use webgpu_book::{run_wgpu, BufferInfo, RenderConfiguration, WindowConfiguration};
+use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
 
 use crate::vertex::Vertex;
 

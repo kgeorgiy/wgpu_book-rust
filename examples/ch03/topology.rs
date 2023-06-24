@@ -1,6 +1,6 @@
 use wgpu::{IndexFormat, PrimitiveTopology};
 
-use webgpu_book::{run_wgpu, RenderConfiguration, WindowConfiguration};
+use webgpu_book::{RenderConfiguration, run_wgpu, WindowConfiguration};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

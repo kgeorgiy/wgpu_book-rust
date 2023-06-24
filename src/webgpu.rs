@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use wgpu::{BindGroupLayout, Buffer, Device, PrimitiveState, RenderPipeline, ShaderStages, SurfaceConfiguration, TextureFormat, VertexBufferLayout};
 
-use crate::{SmartBufferDescriptor, CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer};
+use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer, SmartBufferDescriptor};
 
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
