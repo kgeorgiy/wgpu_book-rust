@@ -49,7 +49,7 @@ impl Content for CameraState {
 fn main() {
     let model = create_rotation([PI / 8.0, PI / 8.0, PI / 8.0]);
     run_uniform(
-        "Controlled camera",
+        "Ch6. Controlled camera",
         include_str!("cube_face_colors.wgsl"),
         model,
         &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),

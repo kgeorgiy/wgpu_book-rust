@@ -72,3 +72,23 @@ path = "examples/ch06/rotate_cube.rs"
 [[example]]
 name = "ch06_cube_camera"
 path = "examples/ch06/cube_camera.rs"
+
+[[example]]
+name = "ch07_cube"
+path = "examples/ch07/cube.rs"
+
+[[example]]
+name = "ch07_sphere"
+path = "examples/ch07/sphere.rs"
+
+[[example]]
+name = "ch07_cylinder"
+path = "examples/ch07/cylinder.rs"
+
+[[example]]
+name = "ch07_cone"
+path = "examples/ch07/cone.rs"
+
+[[example]]
+name = "ch07_torus"
+path = "examples/ch07/torus.rs"

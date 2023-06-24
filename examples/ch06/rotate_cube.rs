@@ -9,7 +9,7 @@ mod state;
 
 fn main() {
     AnimationState::run(
-        "Auto-rotated cube",
+        "Ch6. Auto-rotated cube",
         include_str!("cube_face_colors.wgsl"),
         1.0,
         &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),

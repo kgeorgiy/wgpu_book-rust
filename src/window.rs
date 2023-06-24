@@ -9,8 +9,7 @@ use winit::{
 use crate::{Content, WindowConfiguration};
 use crate::window_api::RawWindow;
 
-pub fn show<F>(config: &WindowConfiguration, factory: F) -> !
-where
+pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
     F: FnOnce(&dyn RawWindow) -> Box<dyn Content>,
 {
     let event_loop = EventLoop::new();
@@ -42,9 +41,7 @@ where
                 }
                 _ => (),
             },
-            Event::DeviceEvent { event, .. } => {
-                contents.deref_mut().input(event)
-            },
+            Event::DeviceEvent { event, .. } => contents.deref_mut().input(event),
             Event::RedrawRequested(_) => contents.deref_mut().update(render_start_time.elapsed()),
             Event::MainEventsCleared => window.request_redraw(),
             _ => (),

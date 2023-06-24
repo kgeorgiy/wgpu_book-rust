@@ -35,7 +35,7 @@ fn create_vertices() -> [Vertex; 300] {
 
 fn main() {
     MvpState::run(
-        "Line",
+        "Ch6. Line",
         include_str!("line3d.wgsl"),
         &create_vertices(),
         PrimitiveTopology::LineStrip,

@@ -214,7 +214,7 @@ pub fn run_uniform<V: VertexBufferInfo>(
     content: Box<dyn FnOnce(BufferWriter<[[f32; 4]; 4]>) -> Box<dyn Content + 'static>>
 ) {
     run_wgpu(
-        &WindowConfiguration { title: format!("Ch6. {}", title).as_str() },
+        &WindowConfiguration { title },
         RenderConfiguration {
             shader_source,
             vertices: indices.map_or(vertices.len(), |indices| indices.len()),

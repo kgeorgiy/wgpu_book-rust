@@ -9,7 +9,7 @@ mod state;
 
 fn main() {
     MvpState::run(
-        "Vertex colors cube",
+        "Ch6. Vertex colors cube",
         include_str!("cube_face_colors.wgsl"),
         &ColorVertex::create(CUBE_INDEX_DATA.positions, CUBE_INDEX_DATA.colors),
         PrimitiveTopology::TriangleList,
