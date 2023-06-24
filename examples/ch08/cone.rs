@@ -56,5 +56,5 @@ fn outer(p: Point3<f32>, other: Point3<f32>) -> Vertex {
 
 
 fn main() {
-    ProtoUniforms::example().run("Ch. 8. Cone", &cone_vertices(0.5, 1.5, 2.0, 30));
+    ProtoUniforms::example().run("Ch. 8. Cone", &cone_vertices(0.5, 1.5, 2.0, 12));
 }

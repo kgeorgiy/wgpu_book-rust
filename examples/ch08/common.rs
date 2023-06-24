@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 use std::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
+use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, vec4, Vector3, Vector4};
 use wgpu::{PrimitiveTopology, ShaderStages, VertexAttribute};
 
 use webgpu_book::{BufferInfo, Content, RenderConfiguration, run_wgpu, TypedBufferWriter, VertexBufferInfo, WindowConfiguration};
@@ -165,14 +165,49 @@ impl ProtoUniforms {
         )
     }
 
-    pub fn run<V: VertexBufferInfo>(self, title: &str, vertices: &[V]) {
+    pub fn run<V: VertexBufferInfo>(self, title: &str, vertices: &[V]) -> ! {
+        self.run_wgpu(
+            title,
+            include_str!("shader.wgsl"),
+            PrimitiveTopology::TriangleList,
+            vertices
+        );
+    }
+
+    #[allow(dead_code)]
+    pub fn run_wireframe(self, title: &str, vertices: &[Vertex], normal_len: f32) -> ! {
+        let mut wireframe_vertices: Vec<Vertex> = Vec::with_capacity(vertices.len() * 4);
+        for face in vertices.chunks(3) {
+            wireframe_vertices.extend_from_slice(&[face[0], face[1], face[1], face[2], face[2], face[0]])
+        }
+        if normal_len > 0.0 {
+            for vertex in vertices {
+                wireframe_vertices.extend_from_slice(&[*vertex, vertex.normal_vertex(normal_len)]);
+            }
+        }
+
+        self.run_wgpu(
+            &title,
+            include_str!("wireframe.wgsl"),
+            PrimitiveTopology::LineList,
+            &wireframe_vertices
+        );
+    }
+
+    fn run_wgpu<V: VertexBufferInfo>(
+        self,
+        title: &str,
+        shader_source: &str,
+        topology: PrimitiveTopology,
+        vertices: &[V]
+    ) -> ! {
         run_wgpu(
             &WindowConfiguration { title },
             RenderConfiguration {
-                shader_source: include_str!("shader.wgsl"),
+                shader_source,
                 vertices: vertices.len(),
-                topology: PrimitiveTopology::TriangleList,
-                vertex_buffers: &[V::buffer("Vertices", &vertices)],
+                topology,
+                vertex_buffers: &[V::buffer("Vertices", vertices)],
                 index_buffer: None,
                 uniform_buffers: &[
                     BufferInfo::buffer_format("Vertex uniforms", &[self.vertex], ShaderStages::VERTEX),
@@ -234,11 +269,20 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    const FAKE_NORMAL: Vector4<f32> = vec4(0.0, 0.0, 0.0, 0.0);
+
     #[allow(dead_code)]
     pub fn new(position: Point3<f32>, normal: Vector3<f32>) -> Self {
         Self {
             position: position.to_homogeneous().into(),
             normal: normal.normalize().extend(0.0).into(),
+        }
+    }
+
+    pub(crate) fn normal_vertex(&self, normal_len: f32) -> Self {
+        Self {
+            position: (Vector4::from(self.position) + Vector4::from(self.normal) * normal_len).into(),
+            normal: Self::FAKE_NORMAL.into()
         }
     }
 }
