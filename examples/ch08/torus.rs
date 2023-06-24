@@ -36,13 +36,11 @@ pub fn torus_vertices(r_torus:f32, r_tube:f32, n_torus:usize, n_tube:usize) -> V
     vertices
 }
 
-
 fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Vertex {
     let position = torus_position(r_torus, r_tube, u, v);
     let center = torus_position(r_torus, 0.0, u, v);
     Vertex::new(position, position - center)
 }
-
 
 fn main() {
     ProtoUniforms::example().run("Ch. 8. Torus", &torus_vertices(1.5, 0.4, 20, 20));

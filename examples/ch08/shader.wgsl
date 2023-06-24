@@ -28,12 +28,12 @@ struct FragmentUniforms {
 @binding(1) @group(0) var<uniform> fragment_u: FragmentUniforms;
 
 struct LightUniforms {
-    color: vec4<f32>,
     specular_color: vec4<f32>,
     ambient_intensity: f32,
     diffuse_intensity: f32,
     specular_intensity: f32,
     specular_shininess: f32,
+    color: vec4<f32>,
 };
 @binding(2) @group(0) var<uniform> light_u: LightUniforms;
 

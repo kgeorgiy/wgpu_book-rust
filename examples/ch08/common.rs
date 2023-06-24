@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, vec4, Vector3, Vector4};
-use wgpu::{PrimitiveTopology, ShaderStages, VertexAttribute};
+use wgpu::{Face, PrimitiveTopology, ShaderStages, VertexAttribute};
 
 use webgpu_book::{BufferInfo, Content, RenderConfiguration, run_wgpu, TypedBufferWriter, VertexBufferInfo, WindowConfiguration};
 use webgpu_book::transforms::{create_projection, create_rotation};
@@ -57,12 +57,12 @@ impl VertexUniforms {
         }
     }
 
-    pub(crate) fn set_view_project(&mut self, writer: &TypedBufferWriter<VertexUniforms>, view_project: Matrix4<f32>) {
+    pub fn set_view_project(&mut self, writer: &TypedBufferWriter<VertexUniforms>, view_project: Matrix4<f32>) {
         self.view_project = view_project.into();
         writer.write_slice(&[*self]);
     }
 
-    pub(crate) fn set_model(&mut self, writer: &TypedBufferWriter<VertexUniforms>, model: Matrix4<f32>) {
+    pub fn set_model(&mut self, writer: &TypedBufferWriter<VertexUniforms>, model: Matrix4<f32>) {
         self.model = model.into();
         self.model_it = model.invert().unwrap().transpose().into();
         writer.write_slice(&[*self]);
@@ -88,33 +88,33 @@ impl FragmentUniforms {
 
 // Light
 
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct LightUniforms {
-    color: [f32; 4],
+pub struct LightUniforms<A: Pod> {
     specular_color: [f32; 4],
     ambient_intensity: f32,
     diffuse_intensity: f32,
     specular_intensity: f32,
     specular_shininess: f32,
+    aux: A,
 }
 
-impl LightUniforms {
+impl<A: Pod> LightUniforms<A> {
     pub fn new(
-        color: Point3<f32>,
         specular_color: Point3<f32>,
         ambient_intensity: f32,
         diffuse_intensity: f32,
         specular_intensity: f32,
-        specular_shininess: f32
+        specular_shininess: f32,
+        aux: A,
     ) -> Self {
         Self {
-            color: color.to_homogeneous().into(),
             specular_color: specular_color.to_homogeneous().into(),
             ambient_intensity,
             diffuse_intensity,
             specular_intensity,
             specular_shininess,
+            aux,
         }
     }
 }
@@ -122,20 +122,24 @@ impl LightUniforms {
 
 // ProtoUniforms
 
-pub struct ProtoUniforms {
+pub struct ProtoUniforms<LA: Pod> {
     camera: OglCamera,
     vertex: VertexUniforms,
     fragment: FragmentUniforms,
-    light: LightUniforms,
+    light: LightUniforms<LA>,
     animation_speed: f32,
+    shader_source: String,
+    cull_mode: Option<Face>,
 }
 
-impl ProtoUniforms {
+impl<LA: Pod> ProtoUniforms<LA> {
     pub fn new(
         camera: OglCamera,
         fragment: FragmentUniforms,
-        light: LightUniforms,
-        animation_speed: f32
+        light: LightUniforms<LA>,
+        animation_speed: f32,
+        shader_source: String,
+        cull_mode: Option<Face>
     ) -> Self {
         let view_project = camera.projection() * camera.view();
         ProtoUniforms {
@@ -144,10 +148,12 @@ impl ProtoUniforms {
             fragment,
             light,
             animation_speed,
+            shader_source,
+            cull_mode,
         }
     }
 
-    pub fn example() -> Self {
+    pub fn example_aux(shader_source: String, cull_mode: Option<Face>, light_aux: LA) -> Self {
         let eye = point3(3.0, 1.5, 3.0);
         let look_direction = -eye.to_vec();
         let up_direction = Vector3::unit_y();
@@ -160,15 +166,18 @@ impl ProtoUniforms {
                 eye.to_homogeneous().into(),
                 (side.normalize() - look_direction.normalize() * 2.0).extend(0.0).into()
             ),
-            LightUniforms::new(point3(1.0, 0.0, 0.0), point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0),
+            LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
             1.0,
+            shader_source,
+            cull_mode,
         )
     }
 
     pub fn run<V: VertexBufferInfo>(self, title: &str, vertices: &[V]) -> ! {
+        let shader_source = self.shader_source.clone();
         self.run_wgpu(
             title,
-            include_str!("shader.wgsl"),
+            shader_source.as_str(),
             PrimitiveTopology::TriangleList,
             vertices
         );
@@ -207,6 +216,7 @@ impl ProtoUniforms {
                 shader_source,
                 vertices: vertices.len(),
                 topology,
+                cull_mode: self.cull_mode,
                 vertex_buffers: &[V::buffer("Vertices", vertices)],
                 index_buffer: None,
                 uniform_buffers: &[
@@ -234,19 +244,19 @@ impl ProtoUniforms {
 // Uniforms
 
 #[allow(dead_code)]
-pub struct Uniforms {
+pub struct Uniforms<LA: Pod> {
     camera: OglCamera,
     animation_speed: f32,
 
     vertex: VertexUniforms,
     fragment: FragmentUniforms,
-    light: LightUniforms,
+    light: LightUniforms<LA>,
     vertex_writer: TypedBufferWriter<VertexUniforms>,
     fragment_writer: TypedBufferWriter<FragmentUniforms>,
-    light_writer: TypedBufferWriter<LightUniforms>,
+    light_writer: TypedBufferWriter<LightUniforms<LA>>,
 }
 
-impl Content for Uniforms {
+impl<LA: Pod> Content for Uniforms<LA> {
     fn resize(&mut self, width: u32, height: u32) {
         self.camera.resize(width, height);
         self.vertex.set_view_project(&self.vertex_writer, self.camera.projection() * self.camera.view())
@@ -287,7 +297,26 @@ impl Vertex {
     }
 }
 
-
 impl VertexBufferInfo for Vertex {
     const ATTRIBUTES: &'static [VertexAttribute] = &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
+}
+
+
+// LightAux
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+pub struct LightAux { //
+    color: [f32; 4],
+}
+
+impl ProtoUniforms<LightAux> {
+    #[allow(dead_code)]
+    pub fn example() -> Self {
+        ProtoUniforms::example_aux(
+            include_str!("shader.wgsl").to_owned(),
+            None,
+            LightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() },
+        )
+    }
 }
