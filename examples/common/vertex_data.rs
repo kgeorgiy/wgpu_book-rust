@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use cgmath::{Angle, Deg, Point3, point3};
+
 pub struct CubeFaceData {
     pub positions: [[i8; 3]; 36],
     pub colors: [[i8; 3]; 36],
@@ -104,3 +106,21 @@ pub const CUBE_INDEX_DATA: CubeIndexData = {
         ],
     }
 };
+
+pub fn sphere_position(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Point3<f32> {
+    let (sin_theta, cos_theta) = theta.sin_cos();
+    let (sin_phi, cos_phi) = phi.sin_cos();
+    point3(r * sin_theta * cos_phi, r * cos_theta, -r * sin_theta * sin_phi)
+}
+
+pub fn cylinder_position<T: Into<Deg<f32>>>(r: f32, y: f32, theta: T) -> Point3<f32> {
+    let (sin_theta, cos_theta) = theta.into().sin_cos();
+    point3(r * cos_theta, y, -r * sin_theta)
+}
+
+pub fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Point3<f32> {
+    let (sin_v, cos_v) = v.sin_cos();
+    let (sin_u, cos_u) = u.sin_cos();
+    let r = r_torus + r_tube * cos_v;
+    point3(r * cos_u, r_tube * sin_v, -r * sin_u)
+}

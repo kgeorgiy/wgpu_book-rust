@@ -19,7 +19,7 @@ fn main() {
         _ => panic!("Unknown type {}", primitive_type),
     };
 
-    run_wgpu::<()>(
+    run_wgpu(
         &WindowConfiguration {
             title: &format!("Ch4. Topology: {}", primitive_type),
         },

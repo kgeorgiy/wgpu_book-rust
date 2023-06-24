@@ -32,7 +32,7 @@ fn main() {
         indices.push(i + 2);
     }
 
-    run_wgpu::<()>(
+    run_wgpu(
         &WindowConfiguration {
             title: "Ch4. Hexagon (indexed)",
         },

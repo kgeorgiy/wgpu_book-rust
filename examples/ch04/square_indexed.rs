@@ -32,7 +32,7 @@ const VERTICES: &[Vertex] = &[
 const INDICES: &[u16] = &[0, 1, 3, 3, 1, 2];
 
 fn main() {
-    run_wgpu::<()>(
+    run_wgpu(
         &WindowConfiguration {
             title: "Ch4. Square (indexed)",
         },

@@ -1,14 +1,9 @@
 use std::rc::Rc;
 use std::time::Duration;
 
-use bytemuck::Pod;
-use wgpu::{
-    BindGroupLayout, Buffer, Device, PrimitiveState, RenderPipeline, SurfaceConfiguration,
-    TextureFormat, VertexBufferLayout,
-};
+use wgpu::{BindGroupLayout, Buffer, Device, PrimitiveState, RenderPipeline, ShaderStages, SurfaceConfiguration, TextureFormat, VertexBufferLayout};
 
-use crate::buffer::{TypedBuffer, TypedBufferDescriptor, UntypedBuffer, UntypedBufferDescriptor};
-use crate::{CompositeContent, Content, RawWindow, RenderConfiguration};
+use crate::{SmartBufferDescriptor, CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer};
 
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
@@ -61,99 +56,83 @@ impl WebGPUDevice {
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
     }
-
-    pub(crate) fn create_typed_buffer<T: Pod, F: Clone>(
-        &self,
-        descriptor: TypedBufferDescriptor<T, F>,
-    ) -> TypedBuffer<T, F> {
-        descriptor.create_buffer(&self)
-    }
-
-    pub(crate) fn create_untyped_buffer<F: Clone>(
-        &self,
-        descriptor: &dyn UntypedBufferDescriptor<F>,
-    ) -> UntypedBuffer<F> {
-        descriptor.create_buffer(&self.device)
-    }
 }
 
-struct Uniform<T, const L: usize> {
-    buffer: TypedBuffer<T, ()>,
+struct UniformGroup {
+    buffers: Vec<SmartBuffer<ShaderStages>>,
     bind_group: wgpu::BindGroup,
     bind_group_layout: BindGroupLayout,
 }
 
-impl<T: Pod, const L: usize> Uniform<T, L> {
-    fn new(device: &WebGPUDevice, descriptor: TypedBufferDescriptor<T, ()>) -> Self {
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Uniform Bind Group Layout"),
-                    entries: &[wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    }],
-                });
+impl UniformGroup {
+    fn new(device: &WebGPUDevice, descriptors: &[SmartBufferDescriptor<ShaderStages>]) -> Self {
+        let buffers: Vec<SmartBuffer<ShaderStages>> = descriptors.iter()
+            .map(|descriptor| descriptor.create_buffer(device))
+            .collect();
 
-        let buffer = device.create_typed_buffer(descriptor);
+        let layouts: Vec<wgpu::BindGroupLayoutEntry> = buffers.iter().enumerate()
+            .map(|(index, buffer)| wgpu::BindGroupLayoutEntry {
+                binding: index as u32,
+                visibility: buffer.format.clone(),
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            })
+            .collect();
+
+        let bind_group_layout =
+            device.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Uniform Bind Group Layout"),
+                entries: &layouts,
+            });
+
+        let entries: Vec<wgpu::BindGroupEntry> = buffers.iter().enumerate()
+            .map(|(index, buffer)| wgpu::BindGroupEntry {
+                binding: index as u32,
+                resource: buffer.buffer.as_entire_binding(),
+            })
+            .collect();
+
         let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buffer.buffer.buffer.as_entire_binding(),
-            }],
+            entries: &entries,
             label: Some("Uniform Bind Group"),
         });
-        Uniform {
-            buffer,
-            bind_group,
-            bind_group_layout,
-        }
+
+        Self { buffers, bind_group, bind_group_layout }
     }
 }
 
-pub(crate) struct WebGPUContent<T: Pod> {
+pub(crate) struct WebGPUContent {
     device: WebGPUDevice,
     render_pipeline: RenderPipeline,
     vertices: u32,
     vertex_buffers: Vec<Rc<Buffer>>,
-    index_buffer: Option<UntypedBuffer<wgpu::IndexFormat>>,
-    uniform: Option<Uniform<T, 1>>,
+    index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
+    uniform_group: UniformGroup,
 }
 
-impl<'a, T: Pod> WebGPUContent<T> {
-    pub fn new(window: &dyn RawWindow, conf: RenderConfiguration<'a, T>) -> Box<dyn Content> {
+impl<'a> WebGPUContent {
+    pub fn new(window: &dyn RawWindow, conf: RenderConfiguration<'a>) -> Box<dyn Content> {
         pollster::block_on(Self::new_async(window, conf))
     }
 
     pub async fn new_async(
         window: &dyn RawWindow,
-        conf: RenderConfiguration<'a, T>,
+        conf: RenderConfiguration<'a>,
     ) -> Box<dyn Content> {
         let device = WebGPUDevice::new(window).await;
 
-        let vertex_buffers = conf
-            .vertex_buffers
-            .iter()
-            .map(|buffer| device.create_untyped_buffer(buffer.as_ref()))
+        let vertex_buffers = conf.vertex_buffers.iter()
+            .map(|descriptor| descriptor.create_buffer(&device))
             .collect::<Vec<_>>();
-        let index_buffer = conf
-            .index_buffer
-            .map(|buffer| device.create_untyped_buffer(buffer.as_ref()));
-        let uniform: Option<Uniform<T, 1>> = conf
-            .uniform_buffer
-            .map(|descriptor| Uniform::new(&device, descriptor));
+        let index_buffer = conf.index_buffer
+            .map(|descriptor| descriptor.create_buffer(&device));
+        let uniform_group = UniformGroup::new(&device, conf.uniform_buffers);
 
-        let bind_group_layouts: Vec<&BindGroupLayout> = uniform
-            .as_ref()
-            .map_or(vec![], |u| vec![&u.bind_group_layout]);
         let render_pipeline = Self::create_pipeline(
             &device.device,
             device.texture_format,
@@ -161,7 +140,7 @@ impl<'a, T: Pod> WebGPUContent<T> {
                 .iter()
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>()[..],
-            &bind_group_layouts[..],
+            &vec![&uniform_group.bind_group_layout],
             conf.shader_source,
             PrimitiveState {
                 topology: conf.topology,
@@ -176,7 +155,9 @@ impl<'a, T: Pod> WebGPUContent<T> {
             vertex_buffers_2.push(buffer.buffer)
         }
 
-        let uniform_buffer = uniform.as_ref().map(|u| u.buffer.clone());
+        let uniform_writers = uniform_group.buffers.iter()
+            .map(|buffer| buffer.writer.clone())
+            .collect::<Vec<_>>();
 
         let content = Box::new(WebGPUContent {
             device,
@@ -184,16 +165,10 @@ impl<'a, T: Pod> WebGPUContent<T> {
             vertex_buffers: vertex_buffers_2,
             index_buffer,
             vertices: conf.vertices as u32,
-            uniform,
+            uniform_group,
         });
 
-        match uniform_buffer {
-            Some(buffer) => {
-                let parts = [(conf.content)(buffer.writer.clone()), content];
-                Box::new(CompositeContent::from(parts))
-            }
-            None => content,
-        }
+        Box::new(CompositeContent::from([(conf.content)(uniform_writers), content]))
     }
 
     fn create_pipeline(
@@ -242,7 +217,7 @@ impl<'a, T: Pod> WebGPUContent<T> {
     }
 }
 
-impl<'a, T: Pod> Content for WebGPUContent<T> {
+impl<'a> Content for WebGPUContent {
     fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.device.resize(width, height);
@@ -306,9 +281,7 @@ impl<'a, T: Pod> Content for WebGPUContent<T> {
             for (slot, buffer) in self.vertex_buffers.iter().enumerate() {
                 render_pass.set_vertex_buffer(slot as u32, buffer.slice(..));
             }
-            if let Some(uniform) = self.uniform.as_ref() {
-                render_pass.set_bind_group(0, &uniform.bind_group, &[]);
-            }
+            render_pass.set_bind_group(0, &self.uniform_group.bind_group, &[]);
             if let Some(buffer) = self.index_buffer.as_ref() {
                 render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
                 render_pass.draw_indexed(0..self.vertices, 0, 0..1);

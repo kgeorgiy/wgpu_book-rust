@@ -1,17 +1,15 @@
-use cgmath::{Angle, Deg};
-use common::Wireframe;
-use crate::common::Vertex;
+use cgmath::Deg;
 
+use common::Wireframe;
+
+use crate::common::Vertex;
+use crate::vertex_data::torus_position;
+
+#[path = "../common/vertex_data.rs"]
+mod vertex_data;
 #[path = "../ch06/state.rs"]
 mod state;
 mod common;
-
-pub(crate) fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> [f32; 3] {
-    let (sin_v, cos_v) = v.sin_cos();
-    let (sin_u, cos_u) = u.sin_cos();
-    let r = r_torus + r_tube * cos_v;
-    [r * cos_u, r_tube * sin_v, -r * sin_u]
-}
 
 pub(crate) fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Vertex {
     Vertex::new(torus_position(r_torus, r_tube, u, v))

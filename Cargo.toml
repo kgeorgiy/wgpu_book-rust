@@ -92,3 +92,23 @@ path = "examples/ch07/cone.rs"
 [[example]]
 name = "ch07_torus"
 path = "examples/ch07/torus.rs"
+
+[[example]]
+name = "ch08_cube"
+path = "examples/ch08/cube.rs"
+
+[[example]]
+name = "ch08_sphere"
+path = "examples/ch08/sphere.rs"
+
+[[example]]
+name = "ch08_cylinder"
+path = "examples/ch08/cylinder.rs"
+
+[[example]]
+name = "ch08_cone"
+path = "examples/ch08/cone.rs"
+
+[[example]]
+name = "ch08_torus"
+path = "examples/ch08/torus.rs"

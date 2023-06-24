@@ -1,10 +1,14 @@
 use bytemuck::{Pod, Zeroable};
+use cgmath::Deg;
 use wgpu::{PrimitiveTopology, VertexAttribute};
-use cgmath::{Angle, Deg};
 
 use webgpu_book::VertexBufferInfo;
 
+use crate::common::vertex_data::cylinder_position;
 use crate::state::AnimationState;
+
+#[path = "../common/vertex_data.rs"]
+mod vertex_data;
 
 // Vertex
 
@@ -67,12 +71,6 @@ impl Wireframe {
 // Geometry
 
 #[allow(dead_code)]
-pub(crate) fn cylinder_position<T: Into<Deg<f32>>>(r: f32, y: f32, theta: T) -> [f32; 3] {
-    let (sin_theta, cos_theta) = theta.into().sin_cos();
-    [r * cos_theta, y, -r * sin_theta]
-}
-
-#[allow(dead_code)]
 pub(crate) fn cylinder_vertex<T: Into<Deg<f32>>>(r: f32, y: f32, theta: T) -> Vertex {
-    Vertex::new(cylinder_position(r, y, theta))
+    Vertex::new(cylinder_position(r, y, theta.into()))
 }

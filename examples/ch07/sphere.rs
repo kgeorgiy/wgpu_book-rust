@@ -1,16 +1,13 @@
-use cgmath::{Angle, Deg};
+use cgmath::Deg;
 
 use crate::common::{Vertex, Wireframe};
+use crate::vertex_data::sphere_position;
 
+mod common;
 #[path = "../ch06/state.rs"]
 mod state;
-mod common;
-
-pub fn sphere_position(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> [f32; 3] {
-    let (sin_theta, cos_theta) = theta.sin_cos();
-    let (sin_phi, cos_phi) = phi.sin_cos();
-    [r * sin_theta * cos_phi, r * cos_theta, -r * sin_theta * sin_phi]
-}
+#[path = "../common/vertex_data.rs"]
+mod vertex_data;
 
 fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Vertex {
     Vertex::new(sphere_position(r, theta, phi))

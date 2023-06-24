@@ -1,13 +1,10 @@
-use std::f32::consts::PI;
-use std::time::Duration;
-use cgmath::{Matrix4, Point3, Rad, SquareMatrix, Vector3};
-use wgpu::{PrimitiveTopology, VertexAttribute};
-use bytemuck::{Pod, Zeroable};
+use std::{f32::consts::PI, time::Duration};
 
-use webgpu_book::{
-    BufferInfo, BufferWriter, Content, RenderConfiguration, run_wgpu, TypedBufferDescriptor,
-    VertexBufferInfo, WindowConfiguration,
-};
+use bytemuck::{Pod, Zeroable};
+use cgmath::{Matrix4, Point3, Rad, SquareMatrix, Vector3};
+use wgpu::{PrimitiveTopology, ShaderStages, VertexAttribute};
+
+use webgpu_book::{BufferInfo, Content, RenderConfiguration, run_wgpu, TypedBufferWriter, VertexBufferInfo, WindowConfiguration};
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
 
 // Mvp
@@ -18,12 +15,12 @@ pub struct Mvp {
     view: Matrix4<f32>,
     projection: Matrix4<f32>,
     fovy: Rad<f32>,
-    mvp_buffer: BufferWriter<[[f32; 4]; 4]>,
+    mvp_buffer: TypedBufferWriter<[[f32; 4]; 4]>,
 }
 
 #[allow(dead_code)]
 impl Mvp {
-    pub(crate) fn new(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, mvp_buffer: BufferWriter<[[f32; 4]; 4]>) -> Self {
+    pub(crate) fn new(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, mvp_buffer: TypedBufferWriter<[[f32; 4]; 4]>) -> Self {
         Mvp {
             model,
             view,
@@ -62,7 +59,7 @@ pub(crate) struct MvpProto {
 }
 
 impl MvpProto {
-    pub(crate) fn create(&self, mvp_buffer: BufferWriter<[[f32; 4]; 4]>) -> Mvp {
+    pub(crate) fn create(&self, mvp_buffer: TypedBufferWriter<[[f32; 4]; 4]>) -> Mvp {
         Mvp::new(self.model, self.view, self.fovy, mvp_buffer)
     }
 
@@ -91,17 +88,17 @@ impl MvpProto {
     }
 
     pub(crate) fn run<V: VertexBufferInfo>(
+        self,
         title: &str,
         shader_source: &str,
-        mvp_proto: MvpProto,
         vertices: &[V],
         topology: PrimitiveTopology,
         indices: Option<&[u16]>,
         content: Box<dyn FnOnce(Mvp) -> Box<dyn Content + 'static>>
     ) {
         run_uniform(
-            title, shader_source, mvp_proto.model, vertices, topology, indices,
-            Box::new(move |buffer| content(mvp_proto.create(buffer))),
+            title, shader_source, self.model, vertices, topology, indices,
+            Box::new(move |buffer| content(self.create(buffer))),
         );
     }
 }
@@ -123,8 +120,8 @@ impl MvpState {
         topology: PrimitiveTopology,
         indices: Option<&[u16]>,
     ) {
-        MvpProto::run(
-            title, shader_source, MvpProto::example(), vertices, topology, indices,
+        MvpProto::example().run(
+            title, shader_source, vertices, topology, indices,
             Box::new(move |mvp| Box::new(MvpState { mvp })),
         );
     }
@@ -154,8 +151,8 @@ impl AnimationState {
         topology: PrimitiveTopology,
         indices: Option<&[u16]>,
     ) {
-        MvpProto::run(
-            &title, shader_source, MvpProto::example(), vertices, topology, indices,
+        MvpProto::example().run(
+            &title, shader_source, vertices, topology, indices,
             Box::new(move |mvp| Box::new(AnimationState { mvp, animation_speed }))
         );
     }
@@ -204,30 +201,25 @@ impl VertexBufferInfo for ColorVertex {
     const ATTRIBUTES: &'static [VertexAttribute] = &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
 }
 
-pub fn run_uniform<V: VertexBufferInfo>(
+pub fn run_uniform<V: VertexBufferInfo, T: BufferInfo<ShaderStages>, M: Into<T>>(
     title: &str,
     shader_source: &str,
-    model: Matrix4<f32>,
+    model: M,
     vertices: &[V],
     topology: PrimitiveTopology,
     indices: Option<&[u16]>,
-    content: Box<dyn FnOnce(BufferWriter<[[f32; 4]; 4]>) -> Box<dyn Content + 'static>>
+    content: Box<dyn FnOnce(TypedBufferWriter<T>) -> Box<dyn Content + 'static>>
 ) {
     run_wgpu(
         &WindowConfiguration { title },
         RenderConfiguration {
             shader_source,
             vertices: indices.map_or(vertices.len(), |indices| indices.len()),
+            topology,
             vertex_buffers: &[V::buffer("Vertices", &vertices)],
             index_buffer: indices.map(|indices| u16::buffer("Indices", indices)),
-            topology,
-            uniform_buffer: Some(TypedBufferDescriptor::new(
-                "Uniform",
-                &[model.into()],
-                wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                (),
-            )),
-            content,
+            uniform_buffers: &[<T>::buffer("Uniform", &[model.into()])],
+            content: Box::new(|buffers| content(buffers[0].as_typed())),
             ..RenderConfiguration::default()
         },
     );

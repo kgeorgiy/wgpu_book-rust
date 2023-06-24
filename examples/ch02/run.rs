@@ -1,7 +1,7 @@
 use webgpu_book::{run_wgpu, RenderConfiguration, WindowConfiguration};
 
 pub fn run_example(title: &str, shader_source: &str) -> ! {
-    run_wgpu::<()>(
+    run_wgpu(
         &WindowConfiguration { title },
         RenderConfiguration {
             shader_source,

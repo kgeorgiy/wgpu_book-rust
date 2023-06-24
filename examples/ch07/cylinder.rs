@@ -35,5 +35,5 @@ fn create_mesh(rin: f32, rout: f32, height: f32, n: usize) -> Wireframe {
 }
 
 fn main() {
-    create_mesh(0.5, 1.0, 2.5, 6).show("Ch. 7. Cylinder");
+    create_mesh(0.5, 1.0, 2.5, 20).show("Ch. 7. Cylinder");
 }

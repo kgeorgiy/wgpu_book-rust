@@ -20,7 +20,7 @@ const VERTICES: [Vertex; 3] = [
 ];
 
 fn main() {
-    run_wgpu::<()>(
+    run_wgpu(
         &WindowConfiguration {
             title: "Ch4. Triangle",
         },
