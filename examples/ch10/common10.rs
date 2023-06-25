@@ -71,7 +71,7 @@ fn run_surface(title: &str, vertices: &[Vertex]) -> ! {
 
 pub fn run_example(title: &str, vertices: &[Vertex]) -> ! {
     let args: Vec<String> = std::env::args().collect();
-    let texture_file = if args.len() > 1 { &args[1] } else { "multiple" };
+    let texture_file = if args.len() > 1 { &args[1] } else { "brick" };
     let is_two_side = args.len() > 2 && args[2].parse().expect("true of false");
 
     let proto = proto_example(is_two_side);
