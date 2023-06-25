@@ -1,6 +1,6 @@
-use crate::run::run_example;
+use crate::common::run_example;
 
-mod run;
+mod common;
 
 fn main() -> ! {
     run_example(

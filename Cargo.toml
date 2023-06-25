@@ -15,129 +15,129 @@ winit = "0.28.6"
 
 [[example]]
 name = "ch01_test01"
-path = "examples/ch01/test01.rs" 
+path = "examples/ch01/ex_test01.rs"
 
 [[example]]
 name = "ch01_test02"
-path = "examples/ch01/test02.rs"
+path = "examples/ch01/ex_test02.rs"
 
 [[example]]
 name = "ch02_first_triangle"
-path = "examples/ch02/first_triangle.rs"
+path = "examples/ch02/ex_first_triangle.rs"
 
 [[example]]
 name = "ch02_triangle_vertex_color"
-path = "examples/ch02/triangle_vertex_color.rs"
+path = "examples/ch02/ex_triangle_vertex_color.rs"
 
 [[example]]
 name = "ch03_topology"
-path = "examples/ch03/topology.rs"
+path = "examples/ch03/ex_topology.rs"
 
 [[example]]
 name = "ch04_triangle"
-path = "examples/ch04/triangle.rs"
+path = "examples/ch04/ex_triangle.rs"
 
 [[example]]
 name = "ch04_square"
-path = "examples/ch04/square.rs"
+path = "examples/ch04/ex_square.rs"
 
 [[example]]
 name = "ch04_square_indexed"
-path = "examples/ch04/square_indexed.rs"
+path = "examples/ch04/ex_square_indexed.rs"
 
 [[example]]
 name = "ch04_hexagon"
-path = "examples/ch04/hexagon.rs"
+path = "examples/ch04/ex_hexagon.rs"
 
 [[example]]
 name = "ch05_math"
-path = "examples/ch05/math.rs"
+path = "examples/ch05/ex_math.rs"
 
 [[example]]
 name = "ch06_line3d"
-path = "examples/ch06/line3d.rs"
+path = "examples/ch06/ex_line3d.rs"
 
 [[example]]
 name = "ch06_cube_face_colors"
-path = "examples/ch06/cube_face_colors.rs"
+path = "examples/ch06/ex_cube_face_colors.rs"
 
 [[example]]
 name = "ch06_cube_vertex_colors"
-path = "examples/ch06/cube_vertex_colors.rs"
+path = "examples/ch06/ex_cube_vertex_colors.rs"
 
 [[example]]
 name = "ch06_rotate_cube"
-path = "examples/ch06/rotate_cube.rs"
+path = "examples/ch06/ex_rotate_cube.rs"
 
 [[example]]
 name = "ch06_cube_camera"
-path = "examples/ch06/cube_camera.rs"
+path = "examples/ch06/ex_cube_camera.rs"
 
 [[example]]
 name = "ch07_cube"
-path = "examples/ch07/cube.rs"
+path = "examples/ch07/ex_cube.rs"
 
 [[example]]
 name = "ch07_sphere"
-path = "examples/ch07/sphere.rs"
+path = "examples/ch07/ex_sphere.rs"
 
 [[example]]
 name = "ch07_cylinder"
-path = "examples/ch07/cylinder.rs"
+path = "examples/ch07/ex_cylinder.rs"
 
 [[example]]
 name = "ch07_cone"
-path = "examples/ch07/cone.rs"
+path = "examples/ch07/ex_cone.rs"
 
 [[example]]
 name = "ch07_torus"
-path = "examples/ch07/torus.rs"
+path = "examples/ch07/ex_torus.rs"
 
 [[example]]
 name = "ch08_cube"
-path = "examples/ch08/cube.rs"
+path = "examples/ch08/ex_cube.rs"
 
 [[example]]
 name = "ch08_sphere"
-path = "examples/ch08/sphere.rs"
+path = "examples/ch08/ex_sphere.rs"
 
 [[example]]
 name = "ch08_cylinder"
-path = "examples/ch08/cylinder.rs"
+path = "examples/ch08/ex_cylinder.rs"
 
 [[example]]
 name = "ch08_cone"
-path = "examples/ch08/cone.rs"
+path = "examples/ch08/ex_cone.rs"
 
 [[example]]
 name = "ch08_torus"
-path = "examples/ch08/torus.rs"
+path = "examples/ch08/ex_torus.rs"
 
 [[example]]
 name = "ch09_sinc"
-path = "examples/ch09/sinc.rs"
+path = "examples/ch09/ex_sinc.rs"
 
 [[example]]
 name = "ch09_peaks"
-path = "examples/ch09/peaks.rs"
+path = "examples/ch09/ex_peaks.rs"
 
 [[example]]
 name = "ch09_klein_bottle"
-path = "examples/ch09/klein_bottle.rs"
+path = "examples/ch09/ex_klein_bottle.rs"
 
 [[example]]
 name = "ch09_wellenkugel"
-path = "examples/ch09/wellenkugel.rs"
+path = "examples/ch09/ex_wellenkugel.rs"
 
 [[example]]
 name = "ch09_seashell"
-path = "examples/ch09/seashell.rs"
+path = "examples/ch09/ex_seashell.rs"
 
 [[example]]
 name = "ch09_sievert_enneper"
-path = "examples/ch09/sievert_enneper.rs"
+path = "examples/ch09/ex_sievert_enneper.rs"
 
 [[example]]
 name = "ch09_breather"
-path = "examples/ch09/breather.rs"
+path = "examples/ch09/ex_breather.rs"
 
