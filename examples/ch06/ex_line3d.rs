@@ -3,9 +3,9 @@ use wgpu::{PrimitiveTopology, VertexAttribute};
 
 use webgpu_book::VertexBufferInfo;
 
-use crate::state::MvpState;
+use crate::common06::Mvp;
 
-mod state;
+mod common06;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -34,7 +34,7 @@ fn create_vertices() -> [Vertex; 300] {
 }
 
 fn main() {
-    MvpState::run(
+    Mvp::run(
         "Ch6. Line",
         include_str!("line3d.wgsl"),
         &create_vertices(),

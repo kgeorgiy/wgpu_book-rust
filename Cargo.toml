@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.71"
 bytemuck = {version = "1.13.1", features = ["derive"]}
 cgmath = "0.18.0"
+image = "0.24.6"
 pollster = "0.3.0"
 raw-window-handle = "0.5.2"
 wgpu = "0.16.1"
@@ -141,3 +143,46 @@ path = "examples/ch09/ex_sievert_enneper.rs"
 name = "ch09_breather"
 path = "examples/ch09/ex_breather.rs"
 
+[[example]]
+name = "ch10_cube"
+path = "examples/ch10/ex_cube.rs"
+
+[[example]]
+name = "ch10_sphere"
+path = "examples/ch10/ex_sphere.rs"
+
+[[example]]
+name = "ch10_cylinder"
+path = "examples/ch10/ex_cylinder.rs"
+
+[[example]]
+name = "ch10_sinc"
+path = "examples/ch10/ex_sinc.rs"
+
+[[example]]
+name = "ch10_peaks"
+path = "examples/ch10/ex_peaks.rs"
+
+[[example]]
+name = "ch10_klein_bottle"
+path = "examples/ch10/ex_klein_bottle.rs"
+
+[[example]]
+name = "ch10_wellenkugel"
+path = "examples/ch10/ex_wellenkugel.rs"
+
+[[example]]
+name = "ch10_seashell"
+path = "examples/ch10/ex_seashell.rs"
+
+[[example]]
+name = "ch10_sievert_enneper"
+path = "examples/ch10/ex_sievert_enneper.rs"
+
+[[example]]
+name = "ch10_breather"
+path = "examples/ch10/ex_breather.rs"
+
+[[example]]
+name = "ch10_cube_multiple"
+path = "examples/ch10/ex_cube_multiple.rs"

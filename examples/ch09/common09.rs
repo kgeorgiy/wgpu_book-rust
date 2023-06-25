@@ -1,13 +1,12 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::Point3;
 
-use crate::colormap::Colormap;
-use crate::common::ch08_common::ProtoUniforms;
-use crate::surface_data::{parametric_surface_data, simple_surface_data, Vertex};
+use crate::common::colormap::Colormap;
+pub use crate::common::common08::ProtoUniforms;
+use crate::common::common09::surface_data::{parametric_surface_data, simple_surface_data, Vertex};
 
-#[path = "../ch08/common.rs"]
-mod ch08_common;
-
+#[path = "surface_data.rs"]
+mod surface_data;
 
 // LightAux
 
@@ -19,7 +18,7 @@ pub struct LightAux {
 }
 
 impl LightAux {
-    fn new(is_two_side: bool) -> Self {
+    pub fn new(is_two_side: bool) -> Self {
         Self {
             is_two_side: if is_two_side { 1 } else { 0 },
             padding: [0; 12]
@@ -62,9 +61,6 @@ pub fn run_parametric_surface(
 }
 
 fn run_surface(title: &str, is_two_side: bool, vertices: &[Vertex]) -> ! {
-    print_range(vertices, "x", 0);
-    print_range(vertices, "y", 1);
-    print_range(vertices, "z", 2);
     proto_example(is_two_side).run(title, vertices);
 }
 
@@ -73,13 +69,4 @@ fn get_args() -> (Colormap, bool) {
     let colormap = Colormap::by_name(if args.len() > 1 { &args[1] } else { "jet" });
     let is_two_side = args.len() > 2 && args[2].parse().expect("true of false");
     (colormap, is_two_side)
-}
-
-fn print_range(vertices: &[Vertex], name: &str, index: usize) {
-    println!(
-        "{} {:?} {:?}",
-        name,
-        vertices.iter().map(|vertex| vertex.position[index]).min_by(|a, b| a.partial_cmp(b).unwrap()),
-        vertices.iter().map(|vertex| vertex.position[index]).max_by(|a, b| a.partial_cmp(b).unwrap())
-    );
 }

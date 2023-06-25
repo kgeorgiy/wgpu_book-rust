@@ -1,11 +1,11 @@
 use cgmath::{Deg, point3, Point3, vec3};
 
-use crate::common::{ProtoUniforms, Vertex};
+use crate::common08::{ProtoUniforms, Vertex};
 use crate::vertex_data::cylinder_position;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
-mod common;
+mod common08;
 
 pub fn cone_vertices(r_top: f32, r_bottom: f32, height: f32, n: usize) -> Vec<Vertex> {
     let h = height / 2.0;
@@ -56,5 +56,5 @@ fn outer(p: Point3<f32>, other: Point3<f32>) -> Vertex {
 
 
 fn main() {
-    ProtoUniforms::example().run("Ch. 8. Cone", &cone_vertices(0.5, 1.5, 2.0, 12));
+    ProtoUniforms::example().run("Chapter 8. Cone", &cone_vertices(0.5, 1.5, 2.0, 12));
 }

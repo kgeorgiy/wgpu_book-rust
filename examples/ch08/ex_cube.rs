@@ -1,9 +1,9 @@
-use crate::common::{ProtoUniforms, Vertex};
+use crate::common08::{ProtoUniforms, Vertex};
 use crate::vertex_data::FACE_COLORS_CUBE;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
-mod common;
+mod common08;
 
 fn create_vertices() -> Vec<Vertex> {
     let positions = FACE_COLORS_CUBE.positions;
@@ -22,5 +22,5 @@ fn create_vertices() -> Vec<Vertex> {
 }
 
 fn main() {
-    ProtoUniforms::example().run("Ch. 8. Cube", &create_vertices());
+    ProtoUniforms::example().run("Chapter 8. Cube", &create_vertices());
 }

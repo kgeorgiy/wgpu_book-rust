@@ -4,7 +4,7 @@ use wgpu::VertexAttribute;
 
 use webgpu_book::VertexBufferInfo;
 
-use crate::colormap::{Colormap, ColormapInterpolator};
+use crate::common::colormap::{Colormap, ColormapInterpolator};
 
 fn normalize_point(pt: &Point3<f32>, (min, max): (&Point3<f32>, &Point3<f32>), scale: &Point3<f32>) -> Point3<f32> {
     (point3(-1.0, -1.0, -1.0) + (pt - min).div_element_wise(max - min) * 2.0).mul_element_wise(*scale)

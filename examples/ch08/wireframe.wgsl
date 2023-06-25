@@ -3,7 +3,7 @@ struct VertexUniforms {
     model_it: mat4x4<f32>,
     view_project: mat4x4<f32>,
 };
-@binding(0) @group(0) var<uniform> vertex_u: VertexUniforms;
+@group(0) @binding(0) var<uniform> vertex_u: VertexUniforms;
 
 struct Output {
     @builtin(position) position: vec4<f32>,

@@ -4,8 +4,8 @@ use wgpu::{PrimitiveTopology, VertexAttribute};
 
 use webgpu_book::VertexBufferInfo;
 
+use crate::common::common06::AnimationState;
 use crate::common::vertex_data::cylinder_position;
-use crate::state::AnimationState;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
@@ -14,7 +14,7 @@ mod vertex_data;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub(crate) struct Vertex {
+pub struct Vertex {
     pub position: [f32; 3],
 }
 

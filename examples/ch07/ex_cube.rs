@@ -1,7 +1,6 @@
-use crate::common::{Vertex, Wireframe};
+use crate::common::common07::{Vertex, Wireframe};
 
-#[path = "../ch06/state.rs"]
-mod state;
+#[path = "../common/common.rs"]
 mod common;
 
 fn create_mesh() -> Wireframe {
@@ -32,5 +31,5 @@ fn create_mesh() -> Wireframe {
 }
 
 fn main() {
-    create_mesh().show("Ch. 7. Cube");
+    create_mesh().show("Chapter 7. Cube");
 }

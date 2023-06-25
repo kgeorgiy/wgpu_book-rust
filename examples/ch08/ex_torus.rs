@@ -1,10 +1,9 @@
 use cgmath::Deg;
 
-use crate::common::{ProtoUniforms, Vertex};
-use crate::vertex_data::torus_position;
+use crate::common::common08::{ProtoUniforms, Vertex};
+use crate::common::vertex_data::torus_position;
 
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
+#[path = "../common/common.rs"]
 mod common;
 
 pub fn torus_vertices(r_torus:f32, r_tube:f32, n_torus:usize, n_tube:usize) -> Vec<Vertex> {
@@ -43,5 +42,5 @@ fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Vertex {
 }
 
 fn main() {
-    ProtoUniforms::example().run("Ch. 8. Torus", &torus_vertices(1.5, 0.4, 20, 20));
+    ProtoUniforms::example().run("Chapter 8. Torus", &torus_vertices(1.5, 0.4, 20, 20));
 }

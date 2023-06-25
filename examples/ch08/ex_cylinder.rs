@@ -1,13 +1,13 @@
 use cgmath::{Deg, point3, Point3, vec3};
 
-use crate::common::{ProtoUniforms, Vertex};
+use crate::common08::{ProtoUniforms, Vertex};
 use crate::vertex_data::cylinder_position;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
-mod common;
+mod common08;
 
-pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n:usize) -> Vec<Vertex> {
+pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<Vertex> {
     let h = height / 2.0;
     let d_theta = Deg(360.0 / n as f32);
 
@@ -73,5 +73,5 @@ fn outer(p: Point3<f32>, center: Point3<f32>) -> Vertex {
 }
 
 fn main() {
-    ProtoUniforms::example().run("Ch. 8. Cylinder", &cylinder_vertices(0.5, 1.5, 1.5, 30));
+    ProtoUniforms::example().run("Chapter 8. Cylinder", &cylinder_vertices(0.5, 1.5, 1.5, 30));
 }

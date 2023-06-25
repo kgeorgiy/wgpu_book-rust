@@ -1,11 +1,11 @@
 use wgpu::PrimitiveTopology;
 
-use crate::state::{AnimationState, ColorVertex};
+use crate::common06::{AnimationState, ColorVertex};
 use crate::vertex_data::FACE_COLORS_CUBE;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
-mod state;
+mod common06;
 
 fn main() {
     AnimationState::run(

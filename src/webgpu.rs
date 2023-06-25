@@ -1,16 +1,24 @@
 use std::rc::Rc;
 use std::time::Duration;
 
-use wgpu::{BindGroupLayout, Buffer, Device, PrimitiveState, RenderPipeline, ShaderStages, SurfaceConfiguration, TextureFormat, VertexBufferLayout};
+use anyhow::Result;
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
-use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer, SmartBufferDescriptor};
+use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer};
+use crate::bindings::{Uniforms, Textures};
 
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
-    surface_config: SurfaceConfiguration,
-    pub(crate) device: Device,
+    surface_config: wgpu::SurfaceConfiguration,
+    pub(crate) device: wgpu::Device,
     pub(crate) queue: Rc<wgpu::Queue>,
-    texture_format: TextureFormat,
+    texture_format: wgpu::TextureFormat,
+}
+
+impl WebGPUDevice {
+    pub(crate) fn create_buffer_init(&self, descriptor: &BufferInitDescriptor) -> wgpu::Buffer {
+        self.device.create_buffer_init(descriptor)
+    }
 }
 
 impl WebGPUDevice {
@@ -28,7 +36,7 @@ impl WebGPUDevice {
             .expect("Failed to find an appropriate adapter");
 
         let format = surface.get_capabilities(&adapter).formats[0];
-        let surface_config = SurfaceConfiguration {
+        let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: 0,
@@ -58,72 +66,27 @@ impl WebGPUDevice {
     }
 }
 
-struct UniformGroup {
-    buffers: Vec<SmartBuffer<ShaderStages>>,
-    bind_group: wgpu::BindGroup,
-    bind_group_layout: BindGroupLayout,
-}
 
-impl UniformGroup {
-    fn new(device: &WebGPUDevice, descriptors: &[SmartBufferDescriptor<ShaderStages>]) -> Self {
-        let buffers: Vec<SmartBuffer<ShaderStages>> = descriptors.iter()
-            .map(|descriptor| descriptor.create_buffer(device))
-            .collect();
-
-        let layouts: Vec<wgpu::BindGroupLayoutEntry> = buffers.iter().enumerate()
-            .map(|(index, buffer)| wgpu::BindGroupLayoutEntry {
-                binding: index as u32,
-                visibility: buffer.format.clone(),
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            })
-            .collect();
-
-        let bind_group_layout =
-            device.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Uniform Bind Group Layout"),
-                entries: &layouts,
-            });
-
-        let entries: Vec<wgpu::BindGroupEntry> = buffers.iter().enumerate()
-            .map(|(index, buffer)| wgpu::BindGroupEntry {
-                binding: index as u32,
-                resource: buffer.buffer.as_entire_binding(),
-            })
-            .collect();
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &entries,
-            label: Some("Uniform Bind Group"),
-        });
-
-        Self { buffers, bind_group, bind_group_layout }
-    }
-}
+// WegGPUContent
 
 pub(crate) struct WebGPUContent {
     device: WebGPUDevice,
-    render_pipeline: RenderPipeline,
+    render_pipeline: wgpu::RenderPipeline,
     vertices: u32,
-    vertex_buffers: Vec<Rc<Buffer>>,
+    vertex_buffers: Vec<Rc<wgpu::Buffer>>,
     index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
-    uniform_group: UniformGroup,
+    bind_groups: Vec<wgpu::BindGroup>,
 }
 
-impl<'a> WebGPUContent {
-    pub fn new(window: &dyn RawWindow, conf: RenderConfiguration<'a>) -> Box<dyn Content> {
+impl WebGPUContent {
+    pub fn new<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content + 'a>> {
         pollster::block_on(Self::new_async(window, conf))
     }
 
-    pub async fn new_async(
+    pub async fn new_async<'a>(
         window: &dyn RawWindow,
-        conf: RenderConfiguration<'a>,
-    ) -> Box<dyn Content> {
+        conf: RenderConfiguration,
+    ) -> Result<Box<dyn Content + 'a>> {
         let device = WebGPUDevice::new(window).await;
 
         let vertex_buffers = conf.vertex_buffers.iter()
@@ -131,18 +94,18 @@ impl<'a> WebGPUContent {
             .collect::<Vec<_>>();
         let index_buffer = conf.index_buffer
             .map(|descriptor| descriptor.create_buffer(&device));
-        let uniform_group = UniformGroup::new(&device, conf.uniform_buffers);
+        let uniforms = Uniforms::new(&device, &conf.uniform_buffers);
+        let textures = Textures::new(&device, &conf.textures)?;
 
         let render_pipeline = Self::create_pipeline(
             &device.device,
             device.texture_format,
-            &vertex_buffers
-                .iter()
+            &vertex_buffers.iter()
                 .map(|buffer| buffer.format.clone())
-                .collect::<Vec<_>>()[..],
-            &vec![&uniform_group.bind_group_layout],
-            conf.shader_source,
-            PrimitiveState {
+                .collect::<Vec<_>>(),
+            &vec![&uniforms.bindings.layout, &textures.bindings.layout],
+            conf.shader_source.as_str(),
+            wgpu::PrimitiveState {
                 topology: conf.topology,
                 strip_index_format: conf.strip_index_format,
                 cull_mode: conf.cull_mode,
@@ -150,35 +113,29 @@ impl<'a> WebGPUContent {
             },
         );
 
-        let mut vertex_buffers_2: Vec<Rc<Buffer>> = Vec::with_capacity(vertex_buffers.len());
-        for buffer in vertex_buffers {
-            vertex_buffers_2.push(buffer.buffer)
-        }
-
-        let uniform_writers = uniform_group.buffers.iter()
-            .map(|buffer| buffer.writer.clone())
-            .collect::<Vec<_>>();
-
+        let uniform_writers = uniforms.writers();
         let content = Box::new(WebGPUContent {
             device,
             render_pipeline,
-            vertex_buffers: vertex_buffers_2,
+            vertex_buffers: vertex_buffers.into_iter()
+                .map(|buffer| buffer.buffer)
+                .collect(),
             index_buffer,
             vertices: conf.vertices as u32,
-            uniform_group,
+            bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
         });
 
-        Box::new(CompositeContent::from([(conf.content)(uniform_writers), content]))
+        Ok(Box::new(CompositeContent::from([conf.content.create(uniform_writers), content])))
     }
 
-    fn create_pipeline(
-        device: &Device,
-        format: TextureFormat,
-        vertex_buffer_layouts: &'a [VertexBufferLayout<'a>],
-        bind_group_layouts: &[&BindGroupLayout],
+    fn create_pipeline<'a>(
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        vertex_buffer_layouts: &'a [wgpu::VertexBufferLayout<'a>],
+        bind_group_layouts: &[&wgpu::BindGroupLayout],
         shader_source: &str,
-        primitive: PrimitiveState,
-    ) -> RenderPipeline {
+        primitive: wgpu::PrimitiveState,
+    ) -> wgpu::RenderPipeline {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(shader_source)),
@@ -205,7 +162,7 @@ impl<'a> WebGPUContent {
             }),
             primitive,
             depth_stencil: Some(wgpu::DepthStencilState {
-                format: TextureFormat::Depth24Plus,
+                format: wgpu::TextureFormat::Depth24Plus,
                 depth_write_enabled: true,
                 depth_compare: wgpu::CompareFunction::LessEqual,
                 stencil: wgpu::StencilState::default(),
@@ -247,10 +204,10 @@ impl<'a> Content for WebGPUContent {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: TextureFormat::Depth24Plus,
+                format: wgpu::TextureFormat::Depth24Plus,
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 label: None,
-                view_formats: &[TextureFormat::Depth24Plus],
+                view_formats: &[wgpu::TextureFormat::Depth24Plus],
             });
             let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -281,7 +238,8 @@ impl<'a> Content for WebGPUContent {
             for (slot, buffer) in self.vertex_buffers.iter().enumerate() {
                 render_pass.set_vertex_buffer(slot as u32, buffer.slice(..));
             }
-            render_pass.set_bind_group(0, &self.uniform_group.bind_group, &[]);
+            self.bind_groups.iter().enumerate()
+                .for_each(|(index, group)| render_pass.set_bind_group(index as u32, group, &[]));
             if let Some(buffer) = self.index_buffer.as_ref() {
                 render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
                 render_pass.draw_indexed(0..self.vertices, 0, 0..1);

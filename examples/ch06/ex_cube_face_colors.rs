@@ -1,14 +1,14 @@
 use wgpu::PrimitiveTopology;
 
-use crate::state::{ColorVertex, MvpState};
+use crate::common06::{ColorVertex, Mvp};
 use crate::vertex_data::FACE_COLORS_CUBE;
 
 #[path = "../common/vertex_data.rs"]
 mod vertex_data;
-mod state;
+mod common06;
 
 fn main() {
-    MvpState::run(
+    Mvp::run(
         "Ch6. Solid face colors cube",
         include_str!("cube_face_colors.wgsl"),
         &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),

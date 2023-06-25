@@ -1,10 +1,8 @@
 use std::f32::consts::PI;
 
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+use crate::common04::Vertex;
 
-use crate::vertex::Vertex;
-
-mod vertex;
+mod common04;
 
 fn main() {
     let colors: [[f32; 3]; 6] = [
@@ -32,16 +30,5 @@ fn main() {
         indices.push(i + 2);
     }
 
-    run_wgpu(
-        &WindowConfiguration {
-            title: "Ch4. Hexagon (indexed)",
-        },
-        RenderConfiguration {
-            shader_source: include_str!("triangle.wgsl"),
-            vertices: indices.len(),
-            vertex_buffers: &[Vertex::buffer("Vertices", &vertices[..])],
-            index_buffer: Some(u16::buffer("Indices", &indices)),
-            ..RenderConfiguration::default()
-        },
-    );
+    common04::run_example("Ch4. Hexagon (indexed)", &vertices, Some(&indices));
 }

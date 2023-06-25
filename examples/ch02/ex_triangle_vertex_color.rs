@@ -1,10 +1,7 @@
-use crate::common::run_example;
+use crate::common02::run_example;
 
-mod common;
+mod common02;
 
 fn main() -> ! {
-    run_example(
-        "ch02: Triangle vertex color",
-        include_str!("triangle_vertex_color.wgsl"),
-    );
+    run_example("Chapter 02. Triangle vertex color", include_str!("triangle_vertex_color.wgsl"));
 }

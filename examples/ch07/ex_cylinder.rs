@@ -1,9 +1,8 @@
 use cgmath::Deg;
 
-use crate::common::{cylinder_vertex, Wireframe};
+use crate::common::common07::{cylinder_vertex, Wireframe};
 
-#[path = "../ch06/state.rs"]
-mod state;
+#[path = "../common/common.rs"]
 mod common;
 
 fn create_mesh(rin: f32, rout: f32, height: f32, n: usize) -> Wireframe {
@@ -35,5 +34,5 @@ fn create_mesh(rin: f32, rout: f32, height: f32, n: usize) -> Wireframe {
 }
 
 fn main() {
-    create_mesh(0.5, 1.0, 2.5, 20).show("Ch. 7. Cylinder");
+    create_mesh(0.5, 1.0, 2.5, 20).show("Chapter 7. Cylinder");
 }

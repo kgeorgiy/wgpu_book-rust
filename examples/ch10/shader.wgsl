@@ -8,14 +8,14 @@ struct VertexUniforms {
 struct Input {
     @location(0) pos: vec4<f32>,
     @location(1) normal: vec4<f32>,
-    @location(2) color: vec4<f32>,
+    @location(2) uv: vec2<f32>,
 };
 
 struct Output {
     @builtin(position) position: vec4<f32>,
     @location(0) v_position: vec4<f32>,
     @location(1) v_normal: vec4<f32>,
-    @location(2) v_color: vec4<f32>,
+    @location(2) v_uv: vec2<f32>,
 };
 
 @vertex
@@ -26,7 +26,7 @@ fn vs_main(in: Input) -> Output {
     output.position = vertex_u.view_project * position;
     output.v_position = position;
     output.v_normal = vertex_u.model_it * in.normal;
-    output.v_color = in.color;
+    output.v_uv = in.uv;
     return output;
 }
 
@@ -75,7 +75,10 @@ fn color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> 
     return vec4(color * (ambient + diffuse) + light_u.specular_color.xyz * specular, 1.0);
 }
 
+@group(1) @binding(0) var texture_data: texture_2d<f32>;
+@group(1) @binding(1) var texture_sampler: sampler;
+
 @fragment
 fn fs_main(in: Output) -> @location(0) vec4<f32> {
-    return color(in.v_position, in.v_normal, in.v_color.xyz);
+    return color(in.v_position, in.v_normal, textureSample(texture_data, texture_sampler, in.v_uv).rgb);
 }

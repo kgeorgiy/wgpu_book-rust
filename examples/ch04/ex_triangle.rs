@@ -1,8 +1,6 @@
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+use crate::common04::{run_example, Vertex};
 
-use crate::vertex::Vertex;
-
-mod vertex;
+mod common04;
 
 const VERTICES: [Vertex; 3] = [
     Vertex {
@@ -20,15 +18,5 @@ const VERTICES: [Vertex; 3] = [
 ];
 
 fn main() {
-    run_wgpu(
-        &WindowConfiguration {
-            title: "Ch4. Triangle",
-        },
-        RenderConfiguration {
-            shader_source: include_str!("triangle.wgsl"),
-            vertices: VERTICES.len(),
-            vertex_buffers: &[Vertex::buffer("Vertices", &VERTICES)],
-            ..RenderConfiguration::default()
-        },
-    )
+    run_example("Ch4. Triangle", &VERTICES, None);
 }

@@ -3,9 +3,8 @@ use std::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, vec4, Vector3, Vector4};
-use wgpu::{Face, PrimitiveTopology, ShaderStages, VertexAttribute};
 
-use webgpu_book::{BufferInfo, Content, RenderConfiguration, run_wgpu, TypedBufferWriter, VertexBufferInfo, WindowConfiguration};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, run_wgpu_title, TypedBufferWriter, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
 
 // Camera
@@ -129,7 +128,7 @@ pub struct ProtoUniforms<LA: Pod> {
     light: LightUniforms<LA>,
     animation_speed: f32,
     shader_source: String,
-    cull_mode: Option<Face>,
+    cull_mode: Option<wgpu::Face>,
 }
 
 impl<LA: Pod> ProtoUniforms<LA> {
@@ -139,7 +138,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         light: LightUniforms<LA>,
         animation_speed: f32,
         shader_source: String,
-        cull_mode: Option<Face>
+        cull_mode: Option<wgpu::Face>
     ) -> Self {
         let view_project = camera.projection() * camera.view();
         ProtoUniforms {
@@ -153,7 +152,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         }
     }
 
-    pub fn example_aux(shader_source: String, cull_mode: Option<Face>, light_aux: LA) -> Self {
+    pub fn example_aux(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA) -> Self {
         let eye = point3(3.0, 1.5, 3.0);
         let look_direction = -eye.to_vec();
         let up_direction = Vector3::unit_y();
@@ -178,7 +177,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         self.run_wgpu(
             title,
             shader_source.as_str(),
-            PrimitiveTopology::TriangleList,
+            wgpu::PrimitiveTopology::TriangleList,
             vertices
         );
     }
@@ -198,46 +197,57 @@ impl<LA: Pod> ProtoUniforms<LA> {
         self.run_wgpu(
             &title,
             include_str!("wireframe.wgsl"),
-            PrimitiveTopology::LineList,
+            wgpu::PrimitiveTopology::LineList,
             &wireframe_vertices
         );
     }
 
-    fn run_wgpu<V: VertexBufferInfo>(
+    pub fn run_wgpu<V: VertexBufferInfo>(
         self,
         title: &str,
         shader_source: &str,
-        topology: PrimitiveTopology,
+        topology: wgpu::PrimitiveTopology,
         vertices: &[V]
     ) -> ! {
-        run_wgpu(
-            &WindowConfiguration { title },
-            RenderConfiguration {
-                shader_source,
-                vertices: vertices.len(),
-                topology,
-                cull_mode: self.cull_mode,
-                vertex_buffers: &[V::buffer("Vertices", vertices)],
-                index_buffer: None,
-                uniform_buffers: &[
-                    BufferInfo::buffer_format("Vertex uniforms", &[self.vertex], ShaderStages::VERTEX),
-                    BufferInfo::buffer_format("Fragment uniforms", &[self.fragment], ShaderStages::FRAGMENT),
-                    BufferInfo::buffer_format("Light uniforms", &[self.light], ShaderStages::FRAGMENT),
-                ],
-                content: Box::new(move |buffers| Box::new(Uniforms {
-                    camera: self.camera.clone(),
-                    animation_speed: self.animation_speed,
+        run_title(&title, self.config(shader_source.to_string(), topology, &vertices));
+    }
 
-                    vertex: self.vertex,
-                    vertex_writer: buffers[0].as_typed(),
-                    fragment: self.fragment,
-                    fragment_writer: buffers[1].as_typed(),
-                    light: self.light,
-                    light_writer: buffers[2].as_typed(),
-                })),
-                ..RenderConfiguration::default()
-            },
-        );
+    pub fn config<V: VertexBufferInfo>(
+        self,
+        shader_source: String,
+        topology: wgpu::PrimitiveTopology,
+        vertices: &[V]
+    ) -> RenderConfiguration {
+        RenderConfiguration {
+            shader_source: shader_source.to_string(),
+            vertices: vertices.len(),
+            topology,
+            cull_mode: self.cull_mode,
+            vertex_buffers: vec![V::buffer("Vertices", vertices)],
+            index_buffer: None,
+            uniform_buffers: vec![
+                BufferInfo::buffer_format("Vertex uniforms", &[self.vertex], wgpu::ShaderStages::VERTEX),
+                BufferInfo::buffer_format("Fragment uniforms", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
+                BufferInfo::buffer_format("Light uniforms", &[self.light], wgpu::ShaderStages::FRAGMENT),
+            ],
+            content: Box::new(self) ,
+            ..RenderConfiguration::default()
+        }
+    }
+}
+
+impl<LA: Pod> ContentFactory for ProtoUniforms<LA> {
+    fn create(&self, buffers: Vec<BufferWriter>) -> Box<dyn Content> {
+        Box::new(Uniforms {
+            camera: self.camera.clone(),
+            animation_speed: self.animation_speed,
+            vertex: self.vertex,
+            vertex_writer: buffers[0].as_typed(),
+            fragment: self.fragment,
+            fragment_writer: buffers[1].as_typed(),
+            light: self.light,
+            light_writer: buffers[2].as_typed(),
+        })
     }
 }
 
@@ -298,7 +308,7 @@ impl Vertex {
 }
 
 impl VertexBufferInfo for Vertex {
-    const ATTRIBUTES: &'static [VertexAttribute] = &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
+    const ATTRIBUTES: &'static [wgpu::VertexAttribute] = &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
 }
 
 
@@ -319,4 +329,8 @@ impl ProtoUniforms<LightAux> {
             LightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() },
         )
     }
+}
+
+pub fn run_title(title: &str, configuration: RenderConfiguration) -> ! {
+    run_wgpu_title(title, configuration)
 }

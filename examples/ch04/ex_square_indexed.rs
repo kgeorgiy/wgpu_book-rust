@@ -1,10 +1,8 @@
 use std::u16;
 
-use webgpu_book::{BufferInfo, RenderConfiguration, run_wgpu, WindowConfiguration};
+use crate::common04::{run_example, Vertex};
 
-use crate::vertex::Vertex;
-
-mod vertex;
+mod common04;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -32,16 +30,5 @@ const VERTICES: &[Vertex] = &[
 const INDICES: &[u16] = &[0, 1, 3, 3, 1, 2];
 
 fn main() {
-    run_wgpu(
-        &WindowConfiguration {
-            title: "Ch4. Square (indexed)",
-        },
-        RenderConfiguration {
-            shader_source: include_str!("triangle.wgsl"),
-            vertices: INDICES.len(),
-            vertex_buffers: &[Vertex::buffer("Vertices", VERTICES)],
-            index_buffer: Some(u16::buffer("Indices", INDICES)),
-            ..RenderConfiguration::default()
-        },
-    )
+    run_example("Ch4. Square (indexed)", VERTICES, Some(INDICES));
 }

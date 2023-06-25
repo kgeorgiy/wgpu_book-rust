@@ -2,7 +2,7 @@ use std::{any::TypeId, marker::PhantomData, mem::size_of, rc::Rc};
 
 use bytemuck::{cast_slice, Pod};
 use wgpu::{Buffer, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
+use wgpu::util::{BufferInitDescriptor};
 
 use crate::webgpu::WebGPUDevice;
 
@@ -64,20 +64,21 @@ impl<T: Pod> TypedBufferWriter<T> {
 
 // SmartBufferDescriptor
 
-pub struct SmartBufferDescriptor<'a, F: Clone> {
-    descriptor: BufferInitDescriptor<'a>,
+pub struct SmartBufferDescriptor<F: Clone> {
+    label: String,
+    contents: Vec<u8>,
+    usage: BufferUsages,
+    // descriptor: BufferInitDescriptor<'a>,
     layout: BufferLayout,
     format: F,
 }
 
-impl<'a, F: Clone> SmartBufferDescriptor<'a, F> {
-    pub fn new<T: Pod>(label: &'a str, items: &'a [T], usage: BufferUsages, format: F) -> Self {
+impl<'a, F: Clone> SmartBufferDescriptor<F> {
+    pub fn new<T: Pod>(label: String, items: &'a [T], usage: BufferUsages, format: F) -> Self {
         Self {
-            descriptor: BufferInitDescriptor {
-                label: Some(label),
-                contents: cast_slice(items),
-                usage,
-            },
+            label,
+            contents: cast_slice(items).to_vec(),
+            usage,
             layout: BufferLayout {
                 len: items.len(),
                 type_id: TypeId::of::<T>(),
@@ -87,7 +88,11 @@ impl<'a, F: Clone> SmartBufferDescriptor<'a, F> {
     }
 
     pub(crate) fn create_buffer(&self, device: &WebGPUDevice) -> SmartBuffer<F> {
-        let buffer = Rc::new(device.device.create_buffer_init(&self.descriptor));
+        let buffer = Rc::new(device.create_buffer_init(&BufferInitDescriptor {
+            label: Some(self.label.as_str()),
+            contents: &self.contents,
+            usage: self.usage,
+        }));
         SmartBuffer {
             buffer: buffer.clone(),
             format: self.format.clone(),
@@ -106,12 +111,12 @@ pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
     const USAGE: BufferUsages;
     const FORMAT: F;
 
-    fn buffer<'a>(label: &'a str, items: &'a [Self]) -> SmartBufferDescriptor<'a, F> {
+    fn buffer(label: &str, items: &[Self]) -> SmartBufferDescriptor<F> {
         Self::buffer_format(label, items, Self::FORMAT.clone())
     }
 
-    fn buffer_format<'a>(label: &'a str, items: &'a [Self], format: F) -> SmartBufferDescriptor<'a, F> {
-        SmartBufferDescriptor::new(label, items, Self::USAGE, format)
+    fn buffer_format(label: &str, items: &[Self], format: F) -> SmartBufferDescriptor<F> {
+        SmartBufferDescriptor::new(label.to_string(), items, Self::USAGE, format)
     }
 }
 

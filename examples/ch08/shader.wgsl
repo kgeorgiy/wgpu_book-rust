@@ -3,7 +3,7 @@ struct VertexUniforms {
     model_it: mat4x4<f32>,
     view_project: mat4x4<f32>,
 };
-@binding(0) @group(0) var<uniform> vertex_u: VertexUniforms;
+@group(0) @binding(0) var<uniform> vertex_u: VertexUniforms;
 
 struct Output {
     @builtin(position) position: vec4<f32>,
@@ -13,8 +13,9 @@ struct Output {
 
 @vertex
 fn vs_main(@location(0) pos: vec4<f32>, @location(1) normal: vec4<f32>) -> Output {
-    var output: Output;
     let position: vec4<f32> = vertex_u.model * pos;
+
+    var output: Output;
     output.position = vertex_u.view_project * position;
     output.v_position = position;
     output.v_normal = vertex_u.model_it * normal;
@@ -25,7 +26,7 @@ struct FragmentUniforms {
     light_position: vec4<f32>,
     eye_position: vec4<f32>,
 };
-@binding(1) @group(0) var<uniform> fragment_u: FragmentUniforms;
+@group(0) @binding(1) var<uniform> fragment_u: FragmentUniforms;
 
 struct LightUniforms {
     specular_color: vec4<f32>,
@@ -35,16 +36,30 @@ struct LightUniforms {
     specular_shininess: f32,
     color: vec4<f32>,
 };
-@binding(2) @group(0) var<uniform> light_u: LightUniforms;
+@group(0) @binding(2) var<uniform> light_u: LightUniforms;
+fn diffuse(dotNL: f32) -> f32 {
+    return light_u.diffuse_intensity * max(dotNL, 0.0);
+}
+fn specular(dotNH: f32) -> f32 {
+    return light_u.specular_intensity * pow(max(dotNH, 0.0), light_u.specular_shininess);
+}
+
+fn color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> {
+    let N: vec3<f32> = normalize(normal.xyz);
+    let L: vec3<f32> = normalize(fragment_u.light_position.xyz - position.xyz);
+    let V: vec3<f32> = normalize(fragment_u.eye_position.xyz - position.xyz);
+    let H: vec3<f32> = normalize(L + V);
+    let dotNL = dot(N, L);
+    let dotNH = dot(N, H);
+
+    let diffuse: f32 = diffuse(dotNL);
+    let specular: f32 = specular(dotNH);
+
+    let ambient = light_u.ambient_intensity;
+    return vec4(color * (ambient + diffuse) + light_u.specular_color.xyz * specular, 1.0);
+}
 
 @fragment
 fn fs_main(@location(0) v_position: vec4<f32>, @location(1) v_normal: vec4<f32>) -> @location(0) vec4<f32> {
-    let N: vec3<f32> = normalize(v_normal.xyz);
-    let L: vec3<f32> = normalize(fragment_u.light_position.xyz - v_position.xyz);
-    let V: vec3<f32> = normalize(fragment_u.eye_position.xyz - v_position.xyz);
-    let H: vec3<f32> = normalize(L + V);
-    let diffuse: f32 = light_u.diffuse_intensity * max(dot(N, L), 0.0);
-    let specular: f32 = light_u.specular_intensity * pow(max(dot(N, H), 0.0), light_u.specular_shininess);
-    let ambient: f32 = light_u.ambient_intensity;
-    return vec4(light_u.color.xyz * (ambient + diffuse) + light_u.specular_color.xyz * specular, 0.0);
+    return color(v_position, v_normal, light_u.color.xyz);
 }
