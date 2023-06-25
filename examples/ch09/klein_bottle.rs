@@ -39,6 +39,6 @@ pub fn klein_bottle(u: f32, v: f32) -> Point3<f32> {
 fn main() {
     run_parametric_surface(
         "Ch. 9. Klein bottle", &klein_bottle,
-        0.0, PI, 0.0, 2.0 * PI, 70, 30, -2.0, 2.0, -2.0, 3.0, 2.5, 0.0
+        (0.0, PI, 70), (0.0, 2.0 * PI, 30), (1.0, 2.0, 2.0)
     );
 }

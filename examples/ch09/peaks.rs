@@ -16,9 +16,6 @@ pub fn peaks(x: f32, z: f32) -> f32 {
 fn main() {
     run_simple_surface(
         "Ch. 9. Peaks", &peaks,
-        -3.0, 3.0,
-        -3.0, 3.0,
-        51, 51,
-        2.0, 0.0
+        (-3.0, 3.0, 51), (-3.0, 3.0, 51), 2.0
     );
 }

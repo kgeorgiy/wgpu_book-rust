@@ -26,6 +26,6 @@ pub fn seashell(u: f32, v: f32) -> Point3<f32> {
 fn main() {
     run_parametric_surface(
         "Ch. 9. Seashell", &seashell,
-        0.0, 1.0, 0.0, 2.0 * PI, 200, 40, -4.0, 4.0, -4.0, 4.0, 2.5, 0.0
+        (0.0, 1.0, 200), (0.0, 2.0 * PI, 40), (2.0, 3.0, 2.0)
     );
 }

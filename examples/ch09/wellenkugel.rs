@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use cgmath::{Point3, point3};
 
 use crate::common::run_parametric_surface;
@@ -18,6 +19,6 @@ pub fn wellenkugel(u: f32, v: f32) -> Point3<f32> {
 fn main() {
     run_parametric_surface(
         "Ch. 9. Wellenkugel", &wellenkugel,
-        0.0, 14.5,  0.0, 5.0, 100, 50, -10.0, 10.0, -10.0, 10.0, 1.5, 0.0
+        (0.0, 14.5, 100),  (0.0, 1.5 * PI, 50), (2.0, 1.5, 2.0)
     );
 }

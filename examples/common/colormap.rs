@@ -1,5 +1,7 @@
 use cgmath::Point3;
 
+// Colormap
+
 #[derive(Clone)]
 pub struct Colormap {
     colors: Vec<Point3<f32>>,
@@ -28,8 +30,22 @@ impl Colormap {
         Self::new(&colormap)
     }
 
-    pub fn interpolator(&self, min: f32, max: f32) -> ColormapInterpolator {
-        ColormapInterpolator::new(self, min, max)
+    pub fn interpolator(&self, min_max: (f32, f32)) -> ColormapInterpolator {
+        ColormapInterpolator { colormap: self, min_max }
+    }
+
+    fn interpolate(&self, value: f32, (min, max): (f32, f32)) -> Point3<f32> {
+        let tn = (value.clamp(min, max) - min) / (max - min);
+        let len1 = self.colors.len() as f32 - 1.0;
+        let index = (len1 * tn).floor() as usize;
+
+        if index == self.colors.len() - 1 {
+            self.colors[index]
+        } else {
+            let a = self.colors[index];
+            let b = self.colors[index + 1];
+            a + (b - a) * (tn * len1 - index as f32)
+        }
     }
 }
 
@@ -38,24 +54,11 @@ impl Colormap {
 
 pub struct ColormapInterpolator<'a> {
     colormap: &'a Colormap,
-    min: f32,
-    max: f32,
+    min_max: (f32, f32),
 }
 
 impl<'a> ColormapInterpolator<'a> {
-    const EPS: f32 = 1e-5;
-
-    pub fn new(colormap: &'a Colormap, min: f32, max: f32) -> ColormapInterpolator<'a> {
-        Self { colormap, min, max}
-    }
-
     pub fn interpolate(&self, value: f32) -> Point3<f32> {
-        let tn = (value.clamp(self.min, self.max) - self.min) / (self.max - self.min);
-        let len1 = self.colormap.colors.len() as f32 - 1.0;
-        let index = (len1 * tn - Self::EPS).floor() as usize;
-
-        let a = self.colormap.colors[index];
-        let b = self.colormap.colors[index + 1];
-        a + (b - a) * (tn * len1 - index as f32)
+        self.colormap.interpolate(value, self.min_max)
     }
 }

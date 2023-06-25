@@ -28,6 +28,6 @@ pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
 fn main() {
     run_parametric_surface(
         "Ch. 9. Sievert-Enneper", &sievert_enneper,
-        -PI / 2.001, PI / 2.001, 0.00001, PI, 60, 200, -2.0, 2.0, -2.0, 2.0, 2.5, 0.3
+        (-PI / 2.001, PI / 2.001, 60), (0.00001, PI, 200), (20.0, 2.0, 2.0)
     );
 }

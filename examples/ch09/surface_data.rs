@@ -6,8 +6,8 @@ use webgpu_book::VertexBufferInfo;
 
 use crate::colormap::{Colormap, ColormapInterpolator};
 
-fn normalize_point(pt: &Point3<f32>, min: &Point3<f32>, max: &Point3<f32>, scale: f32) -> Point3<f32> {
-    (point3(-1.0, -1.0, -1.0) + (pt - min).div_element_wise(max - min) * 2.0) * scale
+fn normalize_point(pt: &Point3<f32>, (min, max): (&Point3<f32>, &Point3<f32>), scale: &Point3<f32>) -> Point3<f32> {
+    (point3(-1.0, -1.0, -1.0) + (pt - min).div_element_wise(max - min) * 2.0).mul_element_wise(*scale)
 }
 
 fn create_quad(points: [Point3<f32>; 4], color: &ColormapInterpolator) -> Vec<Vertex> {
@@ -21,37 +21,35 @@ fn create_quad(points: [Point3<f32>; 4], color: &ColormapInterpolator) -> Vec<Ve
 pub fn simple_surface_data(
     f: &dyn Fn(f32, f32) -> f32,
     colormap: &Colormap,
-    min_x: f32, max_x: f32,
-    min_z: f32, max_z: f32,
-    nx: usize, nz: usize,
-    scale_xz: f32, scale_y: f32,
+    min_max_n_x: (f32, f32, usize),
+    min_max_n_z: (f32, f32, usize),
+    scale: f32,
 ) -> Vec<Vertex> {
     parametric_surface_data(
         &|x, z| point3(x, f(x, z), z), colormap,
-        min_x, max_x,
-        min_z, max_z,
-        nx, nz,
-        min_x, max_x,
-        min_z, max_z,
-        scale_xz, scale_y,
+        min_max_n_x,
+        min_max_n_z,
+        (scale, scale, scale),
     )
+}
+
+fn min_max(min_max: &mut (f32, f32), value: f32) {
+    *min_max = (min_max.0.min(value), min_max.1.max(value));
 }
 
 pub fn parametric_surface_data(
     f: &dyn Fn(f32, f32) -> Point3<f32>,
     colormap: &Colormap,
-    min_u: f32, max_u: f32,
-    min_v: f32, max_v: f32,
-    nu: usize, nv: usize,
-    min_x: f32, max_x: f32,
-    min_z: f32, max_z: f32,
-    scale_xz: f32, scale_y: f32,
+    (min_u, max_u, nu): (f32, f32, usize),
+    (min_v, max_v, nv): (f32, f32, usize),
+    scale: (f32, f32, f32),
 ) -> Vec<Vertex> {
     let du = (max_u - min_u) / (nu as f32 - 1.0);
     let dv = (max_v - min_v) / (nv as f32 - 1.0);
 
-    let mut min_y: f32 = 0.0;
-    let mut max_y: f32 = 0.0;
+    let mut min_max_x: (f32, f32) = (0.0, 0.0);
+    let mut min_max_y: (f32, f32) = (0.0, 0.0);
+    let mut min_max_z: (f32, f32) = (0.0, 0.0);
     let mut points: Vec<Vec<Point3<f32>>> = vec![vec![point3(0.0, 0.0, 0.0); nv]; nu];
 
     for i in 0..nu {
@@ -59,24 +57,32 @@ pub fn parametric_surface_data(
         for j in 0..nv {
             let v = min_v + dv * j as f32;
             let point = f(u, v);
-            min_y = min_y.min(point.y);
-            max_y = max_y.max(point.y);
+            min_max(&mut min_max_x, point.x);
+            min_max(&mut min_max_y, point.y);
+            min_max(&mut min_max_z, point.z);
             points[i][j] = point;
         }
     }
 
-    let min = point3(min_x, min_y - scale_y * (max_y - min_y), min_z);
-    let max = point3(max_x, max_y - scale_y * (max_y - max_y), max_z);
+    let (min_x, max_x) = min_max_x;
+    let (min_y, max_y) = min_max_y;
+    let (min_z, max_z) = min_max_z;
+
+    let min = point3(min_x, min_y, min_z);
+    let max = point3(max_x, max_y, max_z);
+    let min_max = (&min, &max);
+
+    let scale = Point3::from(scale);
     for i in 0..nu {
         for j in 0..nv {
-            points[i][j] = normalize_point(&points[i][j], &min, &max, scale_xz);
+            points[i][j] = normalize_point(&points[i][j], min_max, &scale);
         }
     }
 
-    let color = colormap.interpolator(
-        normalize_point(&point3(0.0, min_y, 0.0), &min, &max, scale_xz).y,
-        normalize_point(&point3(0.0, max_y, 0.0), &min, &max, scale_xz).y
-    );
+    let color = colormap.interpolator((
+        normalize_point(&point3(0.0, min_y, 0.0), min_max, &scale).y,
+        normalize_point(&point3(0.0, max_y, 0.0), min_max, &scale).y
+    ));
 
     let mut vertices: Vec<Vertex> = Vec::with_capacity(4 * (nu - 1) * (nv - 1));
     for i in 0..nu - 1 {

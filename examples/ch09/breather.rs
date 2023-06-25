@@ -32,6 +32,6 @@ pub fn breather(u: f32, v: f32) -> Point3<f32> {
 fn main() {
     run_parametric_surface(
         "Ch. 9. Breather", &breather,
-        -14.0, 14.0, -12.0 * PI, 12.0 * PI, 200, 200, -6.0, 6.0, -6.0, 6.0, 2.0, 0.0
+        (-14.0, 14.0, 200), (-12.0 * PI, 12.0 * PI, 200), (3.0, 2.0, 2.0)
     );
 }

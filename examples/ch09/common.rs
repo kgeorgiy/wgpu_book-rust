@@ -39,35 +39,26 @@ pub fn proto_example(is_two_side: bool) -> ProtoUniforms<LightAux> {
 pub fn run_simple_surface(
     title: &str,
     f: &dyn Fn(f32, f32) -> f32,
-    min_x: f32, max_x: f32,
-    min_z: f32, max_z: f32,
-    nx: usize, nz: usize,
-    scale_xz: f32, scale_y: f32,
+    min_max_n_x: (f32, f32, usize),
+    min_max_n_z: (f32, f32, usize),
+    scale: f32
 ) -> ! {
     let (colormap, is_two_side) = get_args();
-    run_surface(title, is_two_side, &simple_surface_data(
-        f, &colormap,
-        min_x, max_x, min_z, max_z, nx, nz, scale_xz, scale_y
-    ));
+    let vertices = simple_surface_data(f, &colormap, min_max_n_x, min_max_n_z, scale);
+    run_surface(title, is_two_side, &vertices);
 }
 
 #[allow(dead_code)]
 pub fn run_parametric_surface(
     title: &str,
     f: &dyn Fn(f32, f32) -> Point3<f32>,
-    min_u: f32, max_u: f32,
-    min_v: f32, max_v: f32,
-    nu: usize, nv: usize,
-    min_x: f32, max_x: f32,
-    min_z: f32, max_z: f32,
-    scale_xz: f32, scale_y: f32,
+    min_max_n_u: (f32, f32, usize),
+    min_max_n_v: (f32, f32, usize),
+    scale: (f32, f32, f32),
 ) -> ! {
     let (colormap, is_two_side) = get_args();
-
-    run_surface(title, is_two_side, &&parametric_surface_data(
-        f, &colormap,
-        min_u, max_u, min_v, max_v, nu, nv, min_x, max_x, min_z, max_z, scale_xz, scale_y
-    ));
+    let vertices = parametric_surface_data(f, &colormap, min_max_n_u, min_max_n_v, scale);
+    run_surface(title, is_two_side, &vertices);
 }
 
 fn run_surface(title: &str, is_two_side: bool, vertices: &[Vertex]) -> ! {
