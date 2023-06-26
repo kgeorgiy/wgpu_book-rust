@@ -90,3 +90,15 @@ pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
 
     point3(x, ruv * pu.cos(), ruv * pu.sin())
 }
+
+pub fn sphere(u:f32, v:f32) -> Point3<f32> {
+    let (sin_u, cos_u) = u.sin_cos();
+    let (sin_v, cos_v) = v.sin_cos();
+    point3(cos_v * cos_u, sin_v, cos_v * sin_u)
+}
+
+pub fn torus(u: f32, v: f32) -> Point3<f32> {
+    let (sin_u, cos_u) = u.sin_cos();
+    let (sin_v, cos_v) = v.sin_cos();
+    point3((1.0 + 0.3 * cos_v) * cos_u, 0.3 * sin_v, (1.0 + 0.3 * cos_v) * sin_u)
+}

@@ -14,6 +14,7 @@ pub mod colormap;
 pub mod vertex_data;
 pub mod functions;
 pub mod light;
+pub mod surface_data;
 mod vertex;
 mod mvp;
 

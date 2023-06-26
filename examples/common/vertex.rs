@@ -143,3 +143,46 @@ impl VertexBufferInfo for VertexNT {
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x2];
 }
+
+
+// Vertex with position, normal, texture coordinates, and color
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+pub struct VertexNCT {
+    pub position: [f32; 4],
+    pub normal: [f32; 4],
+    pub color: [f32; 4],
+    pub uv: [f32; 2],
+}
+
+impl VertexNCT {
+    #[allow(dead_code)]
+    pub fn new<P, N, C, UV>(position: P, normal: N, color: C, uv: UV)
+        -> Self where P: Into<Point3<f32>>, N: Into<Vector3<f32>>, C: Into<Point3<f32>>, UV: Into<Point2<f32>>
+    {
+        Self {
+            position: position.into().to_homogeneous().into(),
+            normal: normal.into().normalize().extend(0.0).into(),
+            color: color.into().to_homogeneous().into(),
+            uv: uv.into().into(),
+        }
+    }
+}
+
+impl VertexBufferInfo for VertexNCT {
+    const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
+        &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x4, 3=>Float32x2];
+}
+
+impl From<VertexNCT> for VertexNT {
+    fn from(value: VertexNCT) -> Self {
+        VertexNT { position: value.position, normal: value.normal, uv: value.uv }
+    }
+}
+
+impl From<VertexNCT> for VertexNC {
+    fn from(value: VertexNCT) -> Self {
+        VertexNC { position: value.position, normal: value.normal, color: value.color }
+    }
+}

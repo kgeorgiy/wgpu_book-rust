@@ -16,14 +16,14 @@ pub fn proto_example(is_two_side: bool) -> ProtoUniforms<TwoSideLightAux> {
     )
 }
 
-pub fn run_example(title: &str, vertices: &[VertexNT]) -> ! {
-    let texture_file = CmdArgs::next("brick");
+pub fn run_example(title: &str, vertices: &[VertexNCT]) -> ! {
+    let texture_file = CmdArgs::next("whitesquare2");
     let is_two_side = CmdArgs::next("false").parse().expect("true of false");
 
     let proto = proto_example(is_two_side);
     let configuration = RenderConfiguration {
         textures: vec![TextureInfo {
-            file: format!("examples/ch10/assets/{}.png", texture_file).to_string(),
+            file: format!("examples/ch11/assets/{}.png", texture_file).to_string(),
             u_mode: wgpu::AddressMode::Repeat,
             v_mode: wgpu::AddressMode::Repeat,
         }],

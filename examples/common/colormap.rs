@@ -51,7 +51,6 @@ impl Colormap {
     }
 }
 
-
 // ColorInterpolator
 
 #[allow(dead_code)]

@@ -138,3 +138,7 @@ path = "examples/ch10/ex_surface.rs"
 [[example]]
 name = "ch10_cube_multiple"
 path = "examples/ch10/ex_cube_multiple.rs"
+
+[[example]]
+name = "ch11_surface"
+path = "examples/ch11/ex_surface.rs"

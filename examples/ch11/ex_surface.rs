@@ -6,6 +6,6 @@ mod common;
 
 fn main() {
     let colormap = Colormap::by_name("jet");
-    let (kind, vertices) = surface_vertices(&colormap, true);
-    run_example(format!("Chapter 10. {}", kind).as_str(), &vertices);
+    let (kind, vertices) = surface_vertices(&colormap, false);
+    run_example(format!("Chapter 11. {}", kind).as_str(), &vertices);
 }
