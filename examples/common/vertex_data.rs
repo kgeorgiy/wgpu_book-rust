@@ -2,6 +2,10 @@
 
 use cgmath::{Angle, Deg, Point3, point3};
 
+pub fn i8_as_f32<const R: usize, const C: usize>(values: [[i8; C]; R]) -> [[f32; C]; R] {
+    values.map(|vertex| vertex.map(|v| v as f32))
+}
+
 pub struct CubeFaceData {
     pub positions: [[i8; 3]; 36],
     pub colors: [[i8; 3]; 36],

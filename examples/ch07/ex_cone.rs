@@ -1,8 +1,7 @@
 use cgmath::Deg;
 
-use crate::common::common07::{cylinder_vertex, Wireframe};
+use crate::common::{cylinder_vertex, Wireframe};
 
-#[path = "../common/common.rs"]
 mod common;
 
 fn create_mesh(top_r: f32, bot_r: f32, height: f32, n: usize) -> Wireframe {

@@ -116,32 +116,8 @@ name = "ch08_torus"
 path = "examples/ch08/ex_torus.rs"
 
 [[example]]
-name = "ch09_sinc"
-path = "examples/ch09/ex_sinc.rs"
-
-[[example]]
-name = "ch09_peaks"
-path = "examples/ch09/ex_peaks.rs"
-
-[[example]]
-name = "ch09_klein_bottle"
-path = "examples/ch09/ex_klein_bottle.rs"
-
-[[example]]
-name = "ch09_wellenkugel"
-path = "examples/ch09/ex_wellenkugel.rs"
-
-[[example]]
-name = "ch09_seashell"
-path = "examples/ch09/ex_seashell.rs"
-
-[[example]]
-name = "ch09_sievert_enneper"
-path = "examples/ch09/ex_sievert_enneper.rs"
-
-[[example]]
-name = "ch09_breather"
-path = "examples/ch09/ex_breather.rs"
+name = "ch09_surface"
+path = "examples/ch09/ex_surface.rs"
 
 [[example]]
 name = "ch10_cube"
@@ -156,32 +132,8 @@ name = "ch10_cylinder"
 path = "examples/ch10/ex_cylinder.rs"
 
 [[example]]
-name = "ch10_sinc"
-path = "examples/ch10/ex_sinc.rs"
-
-[[example]]
-name = "ch10_peaks"
-path = "examples/ch10/ex_peaks.rs"
-
-[[example]]
-name = "ch10_klein_bottle"
-path = "examples/ch10/ex_klein_bottle.rs"
-
-[[example]]
-name = "ch10_wellenkugel"
-path = "examples/ch10/ex_wellenkugel.rs"
-
-[[example]]
-name = "ch10_seashell"
-path = "examples/ch10/ex_seashell.rs"
-
-[[example]]
-name = "ch10_sievert_enneper"
-path = "examples/ch10/ex_sievert_enneper.rs"
-
-[[example]]
-name = "ch10_breather"
-path = "examples/ch10/ex_breather.rs"
+name = "ch10_surface"
+path = "examples/ch10/ex_surface.rs"
 
 [[example]]
 name = "ch10_cube_multiple"

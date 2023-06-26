@@ -1,13 +1,11 @@
 use cgmath::{Deg, point3, Point3, vec3};
 
-use crate::common08::{ProtoUniforms, Vertex};
-use crate::vertex_data::cylinder_position;
+use crate::common::{LightAux, VertexN};
+use crate::common::vertex_data::cylinder_position;
 
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
-mod common08;
+mod common;
 
-pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<Vertex> {
+pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<VertexN> {
     let h = height / 2.0;
     let d_theta = Deg(360.0 / n as f32);
 
@@ -15,7 +13,7 @@ pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<Vert
     let top_center = point3(0.0, h, 0.0);
     let bot_center = point3(0.0, -h, 0.0);
 
-    let mut vertices: Vec<Vertex> = Vec::with_capacity(24 * n);
+    let mut vertices: Vec<VertexN> = Vec::with_capacity(24 * n);
     for i in 0..n {
         let theta = d_theta * i as f32;
         let theta1 = d_theta * (i + 1) as f32;
@@ -30,20 +28,20 @@ pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<Vert
         let top_in_1 = cylinder_position(rin, h, theta1);
 
         // top face
-        vertices.push(Vertex::new(top_out, up));
-        vertices.push(Vertex::new(top_out_1, up));
-        vertices.push(Vertex::new(top_in_1, up));
-        vertices.push(Vertex::new(top_in_1, up));
-        vertices.push(Vertex::new(top_in, up));
-        vertices.push(Vertex::new(top_out, up));
+        vertices.push(VertexN::new(top_out, up));
+        vertices.push(VertexN::new(top_out_1, up));
+        vertices.push(VertexN::new(top_in_1, up));
+        vertices.push(VertexN::new(top_in_1, up));
+        vertices.push(VertexN::new(top_in, up));
+        vertices.push(VertexN::new(top_out, up));
 
         // bottom face
-        vertices.push(Vertex::new(bot_out, -up));
-        vertices.push(Vertex::new(bot_in, -up));
-        vertices.push(Vertex::new(bot_in_1, -up));
-        vertices.push(Vertex::new(bot_in_1, -up));
-        vertices.push(Vertex::new(bot_out_1, -up));
-        vertices.push(Vertex::new(bot_out, -up));
+        vertices.push(VertexN::new(bot_out, -up));
+        vertices.push(VertexN::new(bot_in, -up));
+        vertices.push(VertexN::new(bot_in_1, -up));
+        vertices.push(VertexN::new(bot_in_1, -up));
+        vertices.push(VertexN::new(bot_out_1, -up));
+        vertices.push(VertexN::new(bot_out, -up));
 
         // outer face
         vertices.push(outer(top_out, top_center));
@@ -64,14 +62,14 @@ pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize) -> Vec<Vert
     vertices
 }
 
-fn inner(p: Point3<f32>, center: Point3<f32>) -> Vertex {
-    Vertex::new(p, center - p)
+fn inner(p: Point3<f32>, center: Point3<f32>) -> VertexN {
+    VertexN::new(p, center - p)
 }
 
-fn outer(p: Point3<f32>, center: Point3<f32>) -> Vertex {
-    Vertex::new(p, p - center)
+fn outer(p: Point3<f32>, center: Point3<f32>) -> VertexN {
+    VertexN::new(p, p - center)
 }
 
 fn main() {
-    ProtoUniforms::example().run("Chapter 8. Cylinder", &cylinder_vertices(0.5, 1.5, 1.5, 30));
+    LightAux::example().run("Chapter 8. Cylinder", &cylinder_vertices(0.5, 1.5, 1.5, 30));
 }

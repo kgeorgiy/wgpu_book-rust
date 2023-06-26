@@ -1,18 +1,14 @@
-use wgpu::PrimitiveTopology;
+use crate::common::{create_vertices, run_example};
+use crate::common::vertex_data::CUBE_INDEX_DATA;
 
-use crate::common06::{ColorVertex, Mvp};
-use crate::vertex_data::CUBE_INDEX_DATA;
-
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
-mod common06;
+mod common;
 
 fn main() {
-    Mvp::run(
-        "Ch6. Vertex colors cube",
+    run_example(
+        "Chapter 6 Vertex colors cube",
         include_str!("cube_face_colors.wgsl"),
-        &ColorVertex::create(CUBE_INDEX_DATA.positions, CUBE_INDEX_DATA.colors),
-        PrimitiveTopology::TriangleList,
+        &create_vertices(CUBE_INDEX_DATA.positions, CUBE_INDEX_DATA.colors),
+        wgpu::PrimitiveTopology::TriangleList,
         Some(&CUBE_INDEX_DATA.indices),
     );
 }

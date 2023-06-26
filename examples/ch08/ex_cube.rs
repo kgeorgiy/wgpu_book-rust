@@ -1,26 +1,16 @@
-use crate::common08::{ProtoUniforms, Vertex};
-use crate::vertex_data::FACE_COLORS_CUBE;
+use std::iter::zip;
 
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
-mod common08;
+use crate::common::{LightAux, VertexN};
+use crate::common::vertex_data::{FACE_COLORS_CUBE, i8_as_f32};
 
-fn create_vertices() -> Vec<Vertex> {
-    let positions = FACE_COLORS_CUBE.positions;
-    let normals = FACE_COLORS_CUBE.normals;
+mod common;
 
-    let mut data: Vec<Vertex> = Vec::with_capacity(positions.len());
-    for i in 0..positions.len() {
-        let position = positions[i];
-        let normal = normals[i];
-        data.push(Vertex {
-            position: [position[0] as f32, position[1] as f32, position[2] as f32, 1.0],
-            normal: [normal[0] as f32, normal[1] as f32, normal[2] as f32, 1.0],
-        });
-    }
-    data.to_vec()
+fn create_vertices() -> Vec<VertexN> {
+    zip(i8_as_f32(FACE_COLORS_CUBE.positions), i8_as_f32(FACE_COLORS_CUBE.normals))
+        .map(|(position, normal)| VertexN::new(position, normal))
+        .collect()
 }
 
 fn main() {
-    ProtoUniforms::example().run("Chapter 8. Cube", &create_vertices());
+    LightAux::example().run("Chapter 8. Cube", &create_vertices());
 }

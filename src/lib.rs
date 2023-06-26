@@ -24,6 +24,12 @@ pub struct RenderConfiguration {
     pub content: Box<dyn ContentFactory>,
 }
 
+impl RenderConfiguration {
+    pub fn run_title(self, title: &str) -> ! {
+        run_wgpu_title(title, self);
+    }
+}
+
 pub trait ContentFactory {
     fn create(&self, uniforms: Vec<BufferWriter>) -> Box<dyn Content>;
 }

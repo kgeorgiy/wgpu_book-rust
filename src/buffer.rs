@@ -60,6 +60,10 @@ impl<T: Pod> TypedBufferWriter<T> {
     pub fn write_slice(&self, slice: &[T]) {
         self.untyped.write_slice(slice);
     }
+
+    pub fn write(&self, value: T) {
+        self.write_slice(&[value]);
+    }
 }
 
 // SmartBufferDescriptor
@@ -120,8 +124,18 @@ pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
     }
 }
 
-impl<T: Pod> BufferInfo<IndexFormat> for T {
+// IndexBufferInfo
+
+pub trait IndexBufferInfo where Self: Pod {
+    const FORMAT: IndexFormat;
+}
+
+impl<I: IndexBufferInfo> BufferInfo<IndexFormat> for I {
     const USAGE: BufferUsages = BufferUsages::INDEX;
+    const FORMAT: IndexFormat = I::FORMAT;
+}
+
+impl IndexBufferInfo for u16 {
     const FORMAT: IndexFormat = IndexFormat::Uint16;
 }
 

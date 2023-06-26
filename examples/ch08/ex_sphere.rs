@@ -1,18 +1,17 @@
 use cgmath::{Deg, point3, Point3};
 
-use crate::common::common08::{ProtoUniforms, Vertex};
+use crate::common::{LightAux, VertexN};
 use crate::common::vertex_data::{sphere_position, sphere_vertices};
 
-#[path = "../common/common.rs"]
 mod common;
 
 const CENTER: Point3<f32> = point3(0.0, 0.0, 0.0);
 
-fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Vertex {
+fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> VertexN {
     let position = sphere_position(r, theta, phi);
-    Vertex::new(position, (position - CENTER) / r)
+    VertexN::new(position, (position - CENTER) / r)
 }
 
 fn main() {
-    ProtoUniforms::example().run("Chapter 8. Sphere", &sphere_vertices(1.5, 10, 20, sphere_vertex));
+    LightAux::example().run("Chapter 8. Sphere", &sphere_vertices(1.5, 10, 20, sphere_vertex));
 }

@@ -1,28 +1,28 @@
 use cgmath::{ElementWise, InnerSpace, point2, Point2, Point3, point3, vec3, Vector3, Vector4};
 
-use crate::common::common10::Vertex;
+use super::VertexNT;
 
 fn normalize_point(
     point: &Point3<f32>,
     (min, max): (&Point3<f32>, &Point3<f32>),
     scale: &Point3<f32>,
     uv: Point2<f32>,
-) -> Vertex {
+) -> VertexNT {
     let normalized = (point - min).div_element_wise(max - min);
-    Vertex::new(
+    VertexNT::new(
         (point3(-1.0, -1.0, -1.0) + normalized * 2.0).mul_element_wise(*scale),
         vec3(0.0, 0.0, 0.0),
         uv
     )
 }
 
-fn create_quad(vertices: [Vertex; 4]) -> Vec<Vertex> {
+fn create_quad(vertices: [VertexNT; 4]) -> Vec<VertexNT> {
     let points: Vec<Vector3<f32>> = vertices.iter()
         .map(|v| <[f32; 4] as Into<Vector4<f32>>>::into(v.position).truncate())
         .collect();
     let normal = (points[2] - points[0]).cross(points[3] - points[1]).normalize();
-    let vs: Vec<Vertex> = vertices.iter()
-        .map(|v| Vertex { normal: normal.extend(0.0).into(), ..*v})
+    let vs: Vec<VertexNT> = vertices.iter()
+        .map(|v| VertexNT { normal: normal.extend(0.0).into(), ..*v})
         .collect();
     vec![vs[0], vs[1], vs[2], vs[2], vs[3], vs[0]]
 }
@@ -32,7 +32,7 @@ pub fn simple_surface_data(
     min_max_n_x: (f32, f32, usize),
     min_max_n_z: (f32, f32, usize),
     scale: f32,
-) -> Vec<Vertex> {
+) -> Vec<VertexNT> {
     parametric_surface_data(
         &|x, z| point3(x, f(x, z), z),
         min_max_n_x,
@@ -50,7 +50,7 @@ pub fn parametric_surface_data(
     (min_u, max_u, nu): (f32, f32, usize),
     (min_v, max_v, nv): (f32, f32, usize),
     scale: (f32, f32, f32),
-) -> Vec<Vertex> {
+) -> Vec<VertexNT> {
     let du = (max_u - min_u) / (nu as f32 - 1.0);
     let dv = (max_v - min_v) / (nv as f32 - 1.0);
 
@@ -80,7 +80,7 @@ pub fn parametric_surface_data(
     let min_max = (&min, &max);
 
     let scale = Point3::from(scale);
-    let mut vertices: Vec<Vec<Vertex>> = vec![vec![Vertex::new(point3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), point2(0.0, 0.0)); nv]; nu];
+    let mut vertices: Vec<Vec<VertexNT>> = vec![vec![VertexNT::new(point3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), point2(0.0, 0.0)); nv]; nu];
     let du = 1.0 / (nu as f32 - 1.0);
     let dv = 1.0 / (nv as f32 - 1.0);
     for i in 0..nu {
@@ -91,7 +91,7 @@ pub fn parametric_surface_data(
         }
     }
 
-    let mut result: Vec<Vertex> = Vec::with_capacity(4 * (nu - 1) * (nv - 1));
+    let mut result: Vec<VertexNT> = Vec::with_capacity(4 * (nu - 1) * (nv - 1));
     for i in 0..nu - 1 {
         for j in 0.. nv - 1 {
             let v0 = vertices[i][j];

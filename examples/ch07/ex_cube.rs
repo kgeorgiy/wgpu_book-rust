@@ -1,6 +1,5 @@
-use crate::common::common07::{Vertex, Wireframe};
+use crate::common::{Vertex, Wireframe};
 
-#[path = "../common/common.rs"]
 mod common;
 
 fn create_mesh() -> Wireframe {
@@ -23,11 +22,9 @@ fn create_mesh() -> Wireframe {
         // 4 lines on sides
         (0, 4), (1, 5), (2, 6), (3, 7),
     ];
-    let mut mesh = Wireframe::new(lines.len());
-    for (f, t) in lines {
-        mesh.add_line(Vertex::new(positions[f]), Vertex::new(positions[t]));
-    }
-    mesh
+    Wireframe::from(lines.iter()
+        .map(|(f, t)| (Vertex::new(positions[*f]), Vertex::new(positions[*t])))
+        .collect::<Vec<_>>())
 }
 
 fn main() {

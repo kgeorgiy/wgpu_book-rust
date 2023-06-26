@@ -1,12 +1,16 @@
 use wgpu::{IndexFormat, PrimitiveTopology};
 
-use webgpu_book::{RenderConfiguration, run_wgpu_title};
+use webgpu_book::RenderConfiguration;
+
+use crate::common::{CmdArgs, Config};
+
+#[path = "../common/common.rs"]
+mod common;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let primitive_type: &str = if args.len() > 1 { &args[1] } else { "triangle-strip" };
+    let primitive_type = CmdArgs::next("triangle-strip");
 
-    let (topology, strip_index_format) = match primitive_type {
+    let (topology, strip_index_format) = match primitive_type.as_str() {
         "point-list" => (PrimitiveTopology::PointList, None),
         "line-list" => (PrimitiveTopology::LineList, None),
         "line-strip" => (PrimitiveTopology::LineStrip, Some(IndexFormat::Uint32)),
@@ -16,12 +20,11 @@ fn main() {
     };
 
     let title = format!("Ch4. Topology: {}", primitive_type);
-    run_wgpu_title(title.as_str(), RenderConfiguration {
-        shader_source: include_str!("topology.wgsl").to_string(),
+    RenderConfiguration {
         vertices: 6,
         topology,
         strip_index_format,
         cull_mode: None,
-        ..RenderConfiguration::default()
-    })
+        ..Config::with_shader(include_str!("topology.wgsl"))
+    }.run_title(title.as_str())
 }

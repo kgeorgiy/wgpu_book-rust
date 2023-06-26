@@ -1,8 +1,8 @@
 use std::u16;
 
-use crate::common04::{run_example, Vertex};
+use crate::common::{run_example, Vertex};
 
-mod common04;
+mod common;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -30,5 +30,5 @@ const VERTICES: &[Vertex] = &[
 const INDICES: &[u16] = &[0, 1, 3, 3, 1, 2];
 
 fn main() {
-    run_example("Ch4. Square (indexed)", VERTICES, Some(INDICES));
+    run_example("Chapter 4. Square (indexed)", VERTICES, Some(INDICES));
 }

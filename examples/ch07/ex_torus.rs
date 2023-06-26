@@ -1,9 +1,8 @@
 use cgmath::Deg;
 
-use crate::common::common07::{Vertex, Wireframe};
+use crate::common::{Vertex, Wireframe};
 use crate::common::vertex_data::torus_position;
 
-#[path = "../common/common.rs"]
 mod common;
 
 pub(crate) fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Vertex {
@@ -31,5 +30,5 @@ fn create_mesh(r_torus: f32, r_tube: f32, n_torus: usize, n_tube: usize) -> Wire
 }
 
 fn main() {
-    create_mesh(1.5, 0.3, 6, 4).show("Chapter 7. Torus");
+    create_mesh(1.5, 0.3, 20, 10).show("Chapter 7. Torus");
 }

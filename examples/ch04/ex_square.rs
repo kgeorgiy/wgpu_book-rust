@@ -1,6 +1,6 @@
-use crate::common04::{run_example, Vertex};
+use crate::common::{run_example, Vertex};
 
-mod common04;
+mod common;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -36,5 +36,5 @@ const VERTICES: &[Vertex] = &[
 ];
 
 fn main() {
-    run_example("Ch4. Square", &VERTICES, None);
+    run_example("Chapter 4. Square", &VERTICES, None);
 }

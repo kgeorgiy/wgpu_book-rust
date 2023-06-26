@@ -1,18 +1,15 @@
 use std::f32::consts::PI;
 
+use bytemuck::Pod;
 use cgmath::Deg;
-use wgpu::PrimitiveTopology;
 use winit::event::{DeviceEvent, ElementState};
 
-use webgpu_book::Content;
-use webgpu_book::transforms::create_rotation;
+use webgpu_book::{Content, transforms::create_rotation};
 
-use crate::common06::{Camera, CameraController, ColorVertex, Mvp, MvpProto};
-use crate::vertex_data::FACE_COLORS_CUBE;
+use crate::common::{Camera, CameraController, create_vertices, Mvp, MvpContent, MvpFactory, MvpMatrix, To, VertexC};
+use crate::common::vertex_data::FACE_COLORS_CUBE;
 
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
-mod common06;
+mod common;
 
 #[derive(Clone)]
 struct CameraState {
@@ -39,7 +36,7 @@ impl CameraState {
     }
 }
 
-impl Content for Mvp<CameraState> {
+impl<B: Pod> Content for MvpContent<CameraState, B> where Mvp: To<B> {
     fn input(&mut self, event: DeviceEvent) {
         self.state.input(event);
         self.set_view(self.state.camera.view());
@@ -49,32 +46,15 @@ impl Content for Mvp<CameraState> {
 fn main() {
     let model = create_rotation([PI / 8.0, PI / 8.0, PI / 8.0]);
     let camera = Camera::new((0.0, 0.0, -5.0), Deg(90.0), Deg(0.0));
-    let proto = MvpProto::new(model, camera.view(), Deg(120.0).into(), CameraState {
+    MvpFactory::<CameraState, MvpMatrix>::new(model, camera.view(), Deg(120.0).into(), CameraState {
         camera,
         camera_controller: CameraController::new(0.005),
         mouse_pressed: false,
-    });
-    proto.run(
-        "Ch6. Controlled camera",
+    }).run::<VertexC, u16>(
+        "Chapter 6 Controlled camera",
         include_str!("cube_face_colors.wgsl"),
-        &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
-        PrimitiveTopology::TriangleList,
+        &create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
+        wgpu::PrimitiveTopology::TriangleList,
         None
     );
-    // run_uniform(
-    //     "Ch6. Controlled camera",
-    //     include_str!("cube_face_colors.wgsl"),
-    //     model,
-    //     &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
-    //     PrimitiveTopology::TriangleList,
-    //     None,
-    //     Box::new(move |mpv_buffer| {
-    //         Box::new(CameraState {
-    //             mvp: Mvp::new(model, camera.view(), Deg(120.0).into(), mpv_buffer),
-    //             camera,
-    //             camera_controller: CameraController::new(0.005),
-    //             mouse_pressed: false,
-    //         })
-    //     })
-    // );
 }

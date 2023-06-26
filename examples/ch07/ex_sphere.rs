@@ -1,9 +1,8 @@
 use cgmath::Deg;
 
-use crate::common::common07::{Vertex, Wireframe};
+use crate::common::{Vertex, Wireframe};
 use crate::common::vertex_data::sphere_position;
 
-#[path = "../common/common.rs"]
 mod common;
 
 fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Vertex {
@@ -31,5 +30,5 @@ fn create_mesh(r: f32, u: usize, v: usize) -> Wireframe {
 }
 
 fn main() {
-    create_mesh(1.7, 6, 6).show("Chapter 7. Sphere");
+    create_mesh(1.7, 20, 20).show("Chapter 7. Sphere");
 }

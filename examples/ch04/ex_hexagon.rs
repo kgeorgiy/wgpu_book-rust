@@ -1,8 +1,8 @@
 use std::f32::consts::PI;
 
-use crate::common04::Vertex;
+use crate::common::Vertex;
 
-mod common04;
+mod common;
 
 fn main() {
     let colors: [[f32; 3]; 6] = [
@@ -23,12 +23,12 @@ fn main() {
         });
     }
 
-    let mut indices = Vec::with_capacity(5 * 3);
+    let mut indices = Vec::with_capacity(4 * 3);
     for i in 0..4 {
         indices.push(0);
         indices.push(i + 1);
         indices.push(i + 2);
     }
 
-    common04::run_example("Ch4. Hexagon (indexed)", &vertices, Some(&indices));
+    common::run_example("Chapter 4. Hexagon (indexed)", &vertices, Some(&indices));
 }

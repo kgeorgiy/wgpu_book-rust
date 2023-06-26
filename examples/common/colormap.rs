@@ -3,10 +3,12 @@ use cgmath::Point3;
 // Colormap
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct Colormap {
     colors: Vec<Point3<f32>>,
 }
 
+#[allow(dead_code)]
 impl Colormap {
     pub fn new(colors: &[[f32; 3]]) -> Self {
         Self { colors: colors.iter().map(|color| Point3::from(*color)).collect() }
@@ -52,11 +54,13 @@ impl Colormap {
 
 // ColorInterpolator
 
+#[allow(dead_code)]
 pub struct ColormapInterpolator<'a> {
     colormap: &'a Colormap,
     min_max: (f32, f32),
 }
 
+#[allow(dead_code)]
 impl<'a> ColormapInterpolator<'a> {
     pub fn interpolate(&self, value: f32) -> Point3<f32> {
         self.colormap.interpolate(value, self.min_max)

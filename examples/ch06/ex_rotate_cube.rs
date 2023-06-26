@@ -1,19 +1,15 @@
-use wgpu::PrimitiveTopology;
+use crate::common::{AnimationState, create_vertices, MvpMatrix, VertexC};
+use crate::common::vertex_data::FACE_COLORS_CUBE;
 
-use crate::common06::{AnimationState, ColorVertex};
-use crate::vertex_data::FACE_COLORS_CUBE;
-
-#[path = "../common/vertex_data.rs"]
-mod vertex_data;
-mod common06;
+mod common;
 
 fn main() {
-    AnimationState::run(
-        "Ch6. Auto-rotated cube",
+    AnimationState::run::<MvpMatrix, VertexC, u16>(
+        "Chapter 6 Auto-rotated cube",
         include_str!("cube_face_colors.wgsl"),
         1.0,
-        &ColorVertex::create(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
-        PrimitiveTopology::TriangleList,
-        None,
+        &create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
+        wgpu::PrimitiveTopology::TriangleList,
+        None
     );
 }
