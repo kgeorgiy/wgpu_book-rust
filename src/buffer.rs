@@ -8,7 +8,7 @@ use crate::webgpu::WebGPUDevice;
 
 // BufferFormat
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct BufferLayout {
     type_id: TypeId,
     len: usize,
@@ -36,6 +36,7 @@ impl<F> SmartBuffer<F> {
 
 // BufferWriter
 
+#[derive(Debug)]
 pub struct BufferWriter {
     queue: Rc<Queue>,
     pub(crate) buffer: Buffer,

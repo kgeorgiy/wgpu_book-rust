@@ -64,17 +64,20 @@ impl Uniforms {
     }
 
     fn some<const UL: usize>(wg: &WebGPUDevice, conf: Box<UniformsConfiguration<UL>>) -> Self {
-        let buffers = conf.buffers
-            .map(|descriptor| descriptor.create_buffer(wg));
+        let UniformsConfiguration { buffers, content_factory} = *conf;
+        let buffers = buffers.into_iter()
+            .map(|descriptor| descriptor.create_buffer(wg))
+            .collect::<Vec<_>>();
 
         let bindings = buffers.iter()
             .map(|buffer| Self::binding(buffer))
             .collect::<Vec<_>>();
         let bindings = BindGroup::new(wg, "Uniform", bindings);
-        let writers = buffers
-            .map(|buffer| buffer.writer(wg.queue.clone()));
+        let writers = buffers.into_iter()
+            .map(|buffer| buffer.writer(wg.queue.clone()))
+            .collect::<Vec<_>>();
 
-        Self { bindings, content: conf.content_factory.create(writers) }
+        Self { bindings, content: content_factory._unsafe_create(writers) }
     }
 
     fn none(wg: &WebGPUDevice) -> Self {

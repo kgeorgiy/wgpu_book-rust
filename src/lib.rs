@@ -1,7 +1,5 @@
-use wgpu::{IndexFormat, ShaderStages, VertexBufferLayout};
-
-pub use crate::buffer::*;
 pub use crate::bindings::TextureInfo;
+pub use crate::buffer::*;
 pub use crate::window_api::*;
 
 pub mod buffer;
@@ -17,9 +15,9 @@ pub struct RenderConfiguration<const UL: usize> {
     pub vertices: usize,
     pub topology: wgpu::PrimitiveTopology,
     pub cull_mode: Option<wgpu::Face>,
-    pub strip_index_format: Option<IndexFormat>,
-    pub vertex_buffers: Vec<SmartBufferDescriptor<VertexBufferLayout<'static>>>,
-    pub index_buffer: Option<SmartBufferDescriptor<IndexFormat>>,
+    pub strip_index_format: Option<wgpu::IndexFormat>,
+    pub vertex_buffers: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
+    pub index_buffer: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
     pub uniforms: Option<Box<UniformsConfiguration<UL>>>,
     pub textures: Vec<TextureInfo>,
 }
@@ -54,20 +52,27 @@ impl<const UL: usize> Default for RenderConfiguration<UL> {
 
 pub struct UniformsConfiguration<const UL: usize> {
     content_factory: Box<dyn ContentFactory<UL>>,
-    buffers: [SmartBufferDescriptor<ShaderStages>; UL],
+    buffers: Vec<SmartBufferDescriptor<wgpu::ShaderStages>>,
 }
 
 impl<const UL: usize> UniformsConfiguration<UL> {
     pub fn new(
-        buffers: [SmartBufferDescriptor<ShaderStages>; UL],
+        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
         content_factory: Box<dyn ContentFactory<UL>>
     ) -> Option<Box<Self>> {
-        Some(Box::new(Self { content_factory, buffers }))
+        Some(Box::new(Self {
+            content_factory,
+            buffers: buffers.into_iter().collect()
+        }))
     }
 }
 
 pub trait ContentFactory<const UL: usize> {
     fn create(&self, uniforms: [BufferWriter; UL]) -> Box<dyn Content>;
+
+    fn _unsafe_create(&self, uniforms: Vec<BufferWriter>) -> Box<dyn Content> {
+        self.create(uniforms.try_into().expect("valid size"))
+    }
 }
 
 struct NoContentFactory;
@@ -77,6 +82,7 @@ impl ContentFactory<0> for NoContentFactory {
         Box::new(NoContent)
     }
 }
+
 
 pub fn run_wgpu<'a, const UL: usize>(window_config: &WindowConfiguration, render_config: RenderConfiguration<UL>) -> ! {
     window::show(window_config, move |window| {
