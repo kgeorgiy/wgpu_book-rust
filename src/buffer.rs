@@ -2,7 +2,7 @@ use std::{any::TypeId, marker::PhantomData, mem::size_of, rc::Rc};
 
 use bytemuck::{cast_slice, Pod};
 use wgpu::{Buffer, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
-use wgpu::util::{BufferInitDescriptor};
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
 use crate::webgpu::WebGPUDevice;
 
@@ -17,29 +17,35 @@ pub(crate) struct BufferLayout {
 
 // SmartBuffer
 
-#[derive(Clone)]
-pub(crate) struct SmartBuffer<F: Clone> {
-    pub(crate) buffer: Rc<Buffer>,
-    pub(crate) writer: BufferWriter,
+pub(crate) struct SmartBuffer<F> {
+    pub(crate) buffer: Buffer,
     pub(crate) format: F,
+    layout: BufferLayout,
 }
 
-impl<F: Clone> SmartBuffer<F> {}
+impl<F> SmartBuffer<F> {
+    pub(crate) fn writer(self, queue: Rc<Queue>) -> BufferWriter {
+        BufferWriter {
+            buffer: self.buffer,
+            layout: self.layout,
+            queue: queue.clone(),
+        }
+    }
+}
 
 
 // BufferWriter
 
-#[derive(Clone)]
 pub struct BufferWriter {
     queue: Rc<Queue>,
-    buffer: Rc<Buffer>,
+    pub(crate) buffer: Buffer,
     layout: BufferLayout,
 }
 
 impl BufferWriter {
-    pub fn as_typed<T: 'static>(&self) -> TypedBufferWriter<T> {
+    pub fn to_typed<T: 'static>(self) -> TypedBufferWriter<T> {
         assert_eq!(self.layout.type_id, TypeId::of::<T>());
-        TypedBufferWriter { untyped: self.clone(), phantom: Default::default() }
+        TypedBufferWriter { untyped: self, phantom: Default::default() }
     }
 
     fn write_slice<T: Pod + 'static>(&self, slice: &[T]) {
@@ -50,7 +56,6 @@ impl BufferWriter {
 
 // TypedBufferWriter
 
-#[derive(Clone)]
 pub struct TypedBufferWriter<T> {
     untyped: BufferWriter,
     phantom: PhantomData<T>,
@@ -68,16 +73,15 @@ impl<T: Pod> TypedBufferWriter<T> {
 
 // SmartBufferDescriptor
 
-pub struct SmartBufferDescriptor<F: Clone> {
+pub struct SmartBufferDescriptor<F> {
     label: String,
     contents: Vec<u8>,
     usage: BufferUsages,
-    // descriptor: BufferInitDescriptor<'a>,
     layout: BufferLayout,
     format: F,
 }
 
-impl<'a, F: Clone> SmartBufferDescriptor<F> {
+impl<'a, F> SmartBufferDescriptor<F> {
     pub fn new<T: Pod>(label: String, items: &'a [T], usage: BufferUsages, format: F) -> Self {
         Self {
             label,
@@ -91,21 +95,13 @@ impl<'a, F: Clone> SmartBufferDescriptor<F> {
         }
     }
 
-    pub(crate) fn create_buffer(&self, device: &WebGPUDevice) -> SmartBuffer<F> {
-        let buffer = Rc::new(device.create_buffer_init(&BufferInitDescriptor {
+    pub(crate) fn create_buffer(self, wg: &WebGPUDevice) -> SmartBuffer<F> {
+        let buffer = wg.device.create_buffer_init(&BufferInitDescriptor {
             label: Some(self.label.as_str()),
             contents: &self.contents,
             usage: self.usage,
-        }));
-        SmartBuffer {
-            buffer: buffer.clone(),
-            format: self.format.clone(),
-            writer: BufferWriter {
-                queue: device.queue.clone(),
-                buffer: buffer.clone(),
-                layout: self.layout.clone(),
-            }
-        }
+        });
+        SmartBuffer { buffer, format: self.format, layout: self.layout }
     }
 }
 
@@ -123,6 +119,7 @@ pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
         SmartBufferDescriptor::new(label.to_string(), items, Self::USAGE, format)
     }
 }
+
 
 // IndexBufferInfo
 

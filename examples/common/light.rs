@@ -4,7 +4,7 @@ use std::time::Duration;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, UniformsConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
 
 use super::{CmdArgs, Config, Mvp, To, Uniform, VertexN};
@@ -217,17 +217,19 @@ impl<LA: Pod> ProtoUniforms<LA> {
         shader_source: &str,
         topology: wgpu::PrimitiveTopology,
         vertices: &[V]
-    ) -> RenderConfiguration {
+    ) -> RenderConfiguration<3> {
         let vertex: MvpModelView = self.mvp().to();
         RenderConfiguration {
             topology,
             cull_mode: self.cull_mode,
-            uniform_buffers: vec![
-                BufferInfo::buffer_format("Vertex uniforms", &[vertex], wgpu::ShaderStages::VERTEX),
-                BufferInfo::buffer_format("Fragment uniforms", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
-                BufferInfo::buffer_format("Light uniforms", &[self.light], wgpu::ShaderStages::FRAGMENT),
-            ],
-            content: Box::new(self),
+            uniforms: UniformsConfiguration::new(
+                [
+                    BufferInfo::buffer_format("Vertex uniforms", &[vertex], wgpu::ShaderStages::VERTEX),
+                    BufferInfo::buffer_format("Fragment uniforms", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
+                    BufferInfo::buffer_format("Light uniforms", &[self.light], wgpu::ShaderStages::FRAGMENT),
+                ],
+                Box::new(self)
+            ),
             ..Config::with_vertices(shader_source, vertices, None::<&[u16]>)
         }
     }
@@ -241,14 +243,14 @@ impl<LA: Pod> ProtoUniforms<LA> {
     }
 }
 
-impl<LA: Pod> ContentFactory for ProtoUniforms<LA> {
-    fn create(&self, buffers: Vec<BufferWriter>) -> Box<dyn Content> {
+impl<LA: Pod> ContentFactory<3> for ProtoUniforms<LA> {
+    fn create(&self, [mvp_buffer, fragment_buffer, light_buffer]: [BufferWriter; 3]) -> Box<dyn Content> {
         Box::new(Uniforms {
             camera: self.camera.clone(),
             animation_speed: self.animation_speed,
-            mvp: Uniform::new(self.mvp(), &buffers[0]),
-            fragment: Uniform::new(self.fragment, &buffers[1]),
-            light: Uniform::new(self.light, &buffers[2]),
+            mvp: Uniform::new(self.mvp(), mvp_buffer),
+            fragment: Uniform::new(self.fragment, fragment_buffer),
+            light: Uniform::new(self.light, light_buffer),
         })
     }
 }

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use image::{io::Reader as ImageReader, RgbaImage};
 
-use crate::{BufferWriter, SmartBufferDescriptor};
+use crate::{Content, NoContent, UniformsConfiguration};
 use crate::buffer::SmartBuffer;
 use crate::webgpu::WebGPUDevice;
 
@@ -23,11 +23,7 @@ pub(crate) struct BindGroup {
 }
 
 impl BindGroup {
-    pub(crate) fn new(
-        wg: &WebGPUDevice,
-        label: &str,
-        bindings: Vec<Binding>,
-    ) -> Self {
+    pub(crate) fn new<'a>(wg: &WebGPUDevice, label: &str, bindings: Vec<Binding<'a>>) -> Self {
         let layouts = &bindings.iter().enumerate()
             .map(|(index, binding)| wgpu::BindGroupLayoutEntry {
                 binding: index as u32,
@@ -58,21 +54,34 @@ impl BindGroup {
 // Uniforms
 
 pub(crate) struct Uniforms {
-    buffers: Vec<SmartBuffer<wgpu::ShaderStages>>,
+    pub(crate) content: Box<dyn Content>,
     pub(crate) bindings: BindGroup,
 }
 
 impl Uniforms {
-    pub(crate) fn new(wg: &WebGPUDevice, descriptors: &[SmartBufferDescriptor<wgpu::ShaderStages>]) -> Self {
-        let buffers: Vec<SmartBuffer<wgpu::ShaderStages>> = descriptors.iter()
-            .map(|descriptor| descriptor.create_buffer(wg))
-            .collect();
+    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, conf: Option<Box<UniformsConfiguration<UL>>>) -> Self {
+        conf.map_or_else(|| Self::none(wg), |conf| Self::some(wg, conf))
+    }
 
-        let bindings = buffers[..].iter()
+    fn some<const UL: usize>(wg: &WebGPUDevice, conf: Box<UniformsConfiguration<UL>>) -> Self {
+        let buffers = conf.buffers
+            .map(|descriptor| descriptor.create_buffer(wg));
+
+        let bindings = buffers.iter()
             .map(|buffer| Self::binding(buffer))
             .collect::<Vec<_>>();
+        let bindings = BindGroup::new(wg, "Uniform", bindings);
+        let writers = buffers
+            .map(|buffer| buffer.writer(wg.queue.clone()));
 
-        Self { bindings: BindGroup::new(wg, "Uniform", bindings), buffers }
+        Self { bindings, content: conf.content_factory.create(writers) }
+    }
+
+    fn none(wg: &WebGPUDevice) -> Self {
+        Self {
+            content: Box::new(NoContent),
+            bindings: BindGroup::new(wg, "Uniform", vec![]),
+        }
     }
 
     fn binding(buffer: &SmartBuffer<wgpu::ShaderStages>) -> Binding {
@@ -85,12 +94,6 @@ impl Uniforms {
                 min_binding_size: None,
             },
         }
-    }
-
-    pub(crate) fn writers(&self) -> Vec<BufferWriter> {
-        self.buffers.iter()
-            .map(|buffer| buffer.writer.clone())
-            .collect::<Vec<_>>()
     }
 }
 

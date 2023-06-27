@@ -2,7 +2,6 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use anyhow::Result;
-use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
 use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer};
 use crate::bindings::{Uniforms, Textures};
@@ -15,11 +14,7 @@ pub(crate) struct WebGPUDevice {
     texture_format: wgpu::TextureFormat,
 }
 
-impl WebGPUDevice {
-    pub(crate) fn create_buffer_init(&self, descriptor: &BufferInitDescriptor) -> wgpu::Buffer {
-        self.device.create_buffer_init(descriptor)
-    }
-}
+impl WebGPUDevice {}
 
 impl WebGPUDevice {
     async fn new(window: &dyn RawWindow) -> Self {
@@ -73,33 +68,33 @@ pub(crate) struct WebGPUContent {
     device: WebGPUDevice,
     render_pipeline: wgpu::RenderPipeline,
     vertices: u32,
-    vertex_buffers: Vec<Rc<wgpu::Buffer>>,
+    vertex_buffers: Vec<wgpu::Buffer>,
     index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
     bind_groups: Vec<wgpu::BindGroup>,
 }
 
 impl WebGPUContent {
-    pub fn new<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content + 'a>> {
+    pub fn new<'a, const UL: usize>(window: &dyn RawWindow, conf: RenderConfiguration<UL>) -> Result<Box<dyn Content + 'a>> {
         pollster::block_on(Self::new_async(window, conf))
     }
 
-    pub async fn new_async<'a>(
+    pub async fn new_async<'a, const UL: usize>(
         window: &dyn RawWindow,
-        conf: RenderConfiguration,
+        conf: RenderConfiguration<UL>,
     ) -> Result<Box<dyn Content + 'a>> {
-        let device = WebGPUDevice::new(window).await;
+        let wg = WebGPUDevice::new(window).await;
 
-        let vertex_buffers = conf.vertex_buffers.iter()
-            .map(|descriptor| descriptor.create_buffer(&device))
+        let vertex_buffers = conf.vertex_buffers.into_iter()
+            .map(|descriptor| descriptor.create_buffer(&wg))
             .collect::<Vec<_>>();
         let index_buffer = conf.index_buffer
-            .map(|descriptor| descriptor.create_buffer(&device));
-        let uniforms = Uniforms::new(&device, &conf.uniform_buffers);
-        let textures = Textures::new(&device, &conf.textures)?;
+            .map(|descriptor| descriptor.create_buffer(&wg));
+        let uniforms = Uniforms::new(&wg, conf.uniforms);
+        let textures = Textures::new(&wg, &conf.textures)?;
 
         let render_pipeline = Self::create_pipeline(
-            &device.device,
-            device.texture_format,
+            &wg.device,
+            wg.texture_format,
             &vertex_buffers.iter()
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>(),
@@ -113,9 +108,8 @@ impl WebGPUContent {
             },
         );
 
-        let uniform_writers = uniforms.writers();
         let content = Box::new(WebGPUContent {
-            device,
+            device: wg,
             render_pipeline,
             vertex_buffers: vertex_buffers.into_iter()
                 .map(|buffer| buffer.buffer)
@@ -125,7 +119,7 @@ impl WebGPUContent {
             bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
         });
 
-        Ok(Box::new(CompositeContent::from([conf.content.create(uniform_writers), content])))
+        Ok(Box::new(CompositeContent::from([uniforms.content, content])))
     }
 
     fn create_pipeline<'a>(

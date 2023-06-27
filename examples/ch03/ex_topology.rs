@@ -20,7 +20,7 @@ fn main() {
     };
 
     let title = format!("Ch4. Topology: {}", primitive_type);
-    RenderConfiguration {
+    RenderConfiguration::<0> {
         vertices: 6,
         topology,
         strip_index_format,

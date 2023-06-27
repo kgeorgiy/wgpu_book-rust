@@ -21,9 +21,8 @@ mod mvp;
 pub(crate) struct Config;
 
 impl Config {
-    pub fn with_vertices<V, I>(shader_source: &str, vertices: &[V], indices: Option<&[I]>)
-        -> RenderConfiguration
-        where V: VertexBufferInfo, I: IndexBufferInfo
+    pub fn with_vertices<V, I, const UL: usize>(shader_source: &str, vertices: &[V], indices: Option<&[I]>)
+        -> RenderConfiguration<UL> where V: VertexBufferInfo, I: IndexBufferInfo
     {
         RenderConfiguration {
             vertices: indices.map_or(vertices.len(), |idx| idx.len()),
@@ -33,7 +32,7 @@ impl Config {
         }
     }
 
-    pub(crate) fn with_shader(shader_source: &str) -> RenderConfiguration {
+    pub(crate) fn with_shader<const UL: usize>(shader_source: &str) -> RenderConfiguration<UL> {
         RenderConfiguration {
             shader_source: shader_source.to_string(),
             ..RenderConfiguration::default()
@@ -87,8 +86,8 @@ pub struct Uniform<T, B> where B: Pod, T: To<B> {
 }
 
 impl<B: 'static, T> Uniform<T, B> where B: Pod, T: To<B> {
-    pub(crate) fn new(state: T, buffer: &BufferWriter) -> Self {
-        Self { state, buffer: buffer.as_typed() }
+    pub(crate) fn new(state: T, buffer: BufferWriter) -> Self {
+        Self { state, buffer: buffer.to_typed() }
     }
 }
 

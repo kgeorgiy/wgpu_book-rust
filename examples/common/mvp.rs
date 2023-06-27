@@ -6,7 +6,7 @@ use std::time::Duration;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Deg, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, RenderConfiguration, UniformsConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
 
 use super::{Config, To, Uniform};
@@ -97,19 +97,24 @@ impl<B: Pod + 'static, T: Clone + 'static> MvpFactory<T, B> where Mvp: To<B>, Mv
     ) -> ! {
         RenderConfiguration {
             topology,
-            uniform_buffers: vec![<B>::buffer("Uniform", &[self.mvp.to()])],
-            content: Box::new(self),
+            uniforms: UniformsConfiguration::new(
+                [<B>::buffer("Uniform", &[self.mvp.to()])],
+                Box::new(self)
+            ),
             ..Config::with_vertices(shader_source, vertices, indices)
         }.run_title(title);
     }
 }
 
-impl<B: Pod + 'static, T: Clone + 'static> ContentFactory for MvpFactory<T, B> where MvpContent<T, B>: Content, Mvp: To<B> {
-    fn create(&self, uniforms: Vec<BufferWriter>) -> Box<dyn Content> {
-        let fovy = self.fovy;
-        let state = self.state.clone();
-        let mvp = self.mvp.clone();
-        Box::new(MvpContent { mvp: Uniform::new(mvp, &uniforms[0]), fovy, state })
+impl<B: Pod + 'static, S: Clone + 'static> ContentFactory<1> for MvpFactory<S, B>
+    where MvpContent<S, B>: Content, Mvp: To<B>
+{
+    fn create(&self, [mvp_buffer]: [BufferWriter; 1]) -> Box<dyn Content> {
+        Box::new(MvpContent {
+            mvp: Uniform::new(self.mvp.clone(), mvp_buffer),
+            fovy: self.fovy,
+            state: self.state.clone()
+        })
     }
 }
 
