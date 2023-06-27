@@ -7,11 +7,10 @@ use core::{marker::PhantomData, time::Duration};
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Deg, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, PipelineConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
-use webgpu_book::UniformsConfiguration;
 
-use super::{Config, To, Uniform};
+use super::{To, Uniform};
 
 #[derive(Clone)]
 pub struct Mvp {
@@ -56,12 +55,12 @@ pub struct MvpFactory<T, B> {
 }
 
 impl<B, T: Clone + 'static> MvpFactory<T, B> {
-    pub fn new(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T) -> Self {
+    #[must_use] pub fn new(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T) -> Self {
         let mvp = Mvp { model, view, projection: create_projection(1.0, fovy) };
         Self { mvp, fovy, state, phantom: PhantomData::default() }
     }
 
-    pub fn from_ogl<P: Into<Point3<f32>>, F: Into<Rad<f32>>>(
+    #[must_use] pub fn from_ogl<P: Into<Point3<f32>>, F: Into<Rad<f32>>>(
         model: Matrix4<f32>,
         eye: P,
         look_at: P,
@@ -72,7 +71,7 @@ impl<B, T: Clone + 'static> MvpFactory<T, B> {
         Self::new(model, create_view(eye.into(), look_at.into(), up), fovy.into(), value)
     }
 
-    pub fn example(value: T) -> Self {
+    #[must_use] pub fn example(value: T) -> Self {
         Self::from_ogl(
             Matrix4::identity(),
             point3(3.0, 1.5, 3.0),
@@ -85,22 +84,12 @@ impl<B, T: Clone + 'static> MvpFactory<T, B> {
 }
 
 impl<B: Pod + 'static, T: Clone + 'static> MvpFactory<T, B> where Mvp: To<B>, MvpContent<T, B>: Content {
-    pub fn run<V: VertexBufferInfo, I: IndexBufferInfo>(
-        self,
-        title: &str,
-        shader_source: &str,
-        vertices: &[V],
-        topology: wgpu::PrimitiveTopology,
-        indices: Option<&[I]>,
-    ) -> ! {
-        RenderConfiguration {
-            topology,
-            uniforms: UniformsConfiguration::new(
+    #[must_use] pub fn into_config(self, shader_source: &str) -> PipelineConfiguration {
+        PipelineConfiguration::new(shader_source)
+            .with_uniforms(
                 [<B>::buffer("Uniform", &[self.mvp.to()])],
-                Box::new(self)
-            ),
-            ..Config::with_vertices(shader_source, vertices, indices)
-        }.run_title(title);
+                Box::new(self),
+            )
     }
 }
 
@@ -124,17 +113,20 @@ pub struct AnimationState {
 }
 
 impl AnimationState {
-    #[allow(dead_code)]
-    pub fn run<B: Pod, V: VertexBufferInfo, I: IndexBufferInfo>(
-        title: &str,
+    #[must_use] pub fn example_config_2<B: Pod, V: VertexBufferInfo, I: IndexBufferInfo>(
         shader_source: &str,
-        animation_speed: f32,
         vertices: &[V],
         topology: wgpu::PrimitiveTopology,
-        indices: Option<&[I]>,
-    ) -> ! where Mvp: To<B> {
-        MvpFactory::example(AnimationState { animation_speed })
-            .run(title, shader_source, vertices, topology, indices);
+        indices: Option<&[I]>
+    ) -> PipelineConfiguration where Mvp: To<B> {
+        Self::example_config::<B>(shader_source)
+            .with_vertices_indices(vertices, indices)
+            .with_topology(topology)
+    }
+
+    #[must_use] pub fn example_config<B: Pod>(shader_source: &str) -> PipelineConfiguration where Mvp: To<B> {
+        MvpFactory::<AnimationState, B>::example(AnimationState { animation_speed: 1.0 })
+            .into_config(shader_source)
     }
 }
 

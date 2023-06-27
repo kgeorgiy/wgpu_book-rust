@@ -1,8 +1,10 @@
 use cgmath::Deg;
+use webgpu_book::PipelineConfiguration;
 
-use crate::common::{Vertex, Wireframe};
+use self::common::{Vertex, Wireframe};
 use crate::common::vertex_data::torus_position;
 
+#[allow(clippy::duplicate_mod)]
 mod common;
 
 pub(crate) fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Vertex {
@@ -29,6 +31,11 @@ fn create_mesh(r_torus: f32, r_tube: f32, n_torus: usize, n_tube: usize) -> Wire
     mesh
 }
 
+#[must_use] pub fn pipeline() -> PipelineConfiguration {
+    create_mesh(1.5, 0.3, 20, 10).into_config()
+}
+
+#[allow(dead_code)]
 fn main() {
-    create_mesh(1.5, 0.3, 20, 10).show("Chapter 7. Torus");
+    pipeline().run_title("Chapter 7. Torus");
 }

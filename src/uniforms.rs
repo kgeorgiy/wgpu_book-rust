@@ -8,17 +8,17 @@ use crate::webgpu::WebGPUDevice;
 
 // Uniforms Configuration
 
-pub struct UniformsConfiguration {
+pub(crate) struct UniformsConfiguration {
     buffers: Vec<SmartBufferDescriptor<wgpu::ShaderStages>>,
     content_factory: Box<dyn UnsafeContentFactory>,
 }
 
 impl UniformsConfiguration {
-    #[must_use] pub fn new<const UL: usize>(
+    #[must_use] pub(crate) fn new<const UL: usize>(
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
         content_factory: Box<dyn ContentFactory<UL>>
-    ) -> Option<Self> {
-        Some(Self { content_factory: Box::new(content_factory), buffers: buffers.into_iter().collect() })
+    ) -> Self {
+        Self { content_factory: Box::new(content_factory), buffers: buffers.into_iter().collect() }
     }
 }
 

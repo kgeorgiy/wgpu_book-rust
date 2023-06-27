@@ -2,27 +2,40 @@ struct ModelUniforms {
     points: mat4x4<f32>,
     normals: mat4x4<f32>,
 }
-@group(0) @binding(0) var<uniform> model_u: ModelUniforms;
+@group(0) @binding(0) var<uniform> model_stride_u: array<ModelUniforms, 1>;
 
 struct CameraUniforms {
     view_project: mat4x4<f32>,
 }
 @group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
 
+struct Input {
+    @builtin(instance_index) index: u32,
+    @location(0) pos: vec4<f32>,
+    @location(1) normal: vec4<f32>,
+    @location(2) color: vec4<f32>,
+    @location(3) uv: vec2<f32>,
+}
+
 struct Output {
     @builtin(position) position: vec4<f32>,
     @location(0) v_position: vec4<f32>,
     @location(1) v_normal: vec4<f32>,
+    @location(2) v_uv: vec2<f32>,
+    @location(3) v_color: vec4<f32>,
 }
 
 @vertex
-fn vs_main(@location(0) pos: vec4<f32>, @location(1) normal: vec4<f32>) -> Output {
-    let position: vec4<f32> = model_u.points * pos;
+fn vs_main(in: Input) -> Output {
+    let model_u = model_stride_u[in.index];
+    let position: vec4<f32> = model_u.points * in.pos;
 
     var output: Output;
     output.position = camera_u.view_project * position;
     output.v_position = position;
-    output.v_normal = model_u.normals * normal;
+    output.v_normal = model_u.normals * in.normal;
+    output.v_uv = in.uv;
+    output.v_color = in.color;
     return output;
 }
 
@@ -38,13 +51,14 @@ struct LightUniforms {
     diffuse_intensity: f32,
     specular_intensity: f32,
     specular_shininess: f32,
-    color: vec4<f32>,
+    is_two_side: i32,
 }
-
 @group(0) @binding(3) var<uniform> light_u: LightUniforms;
+
 fn diffuse(dotNL: f32) -> f32 {
     return light_u.diffuse_intensity * max(dotNL, 0.0);
 }
+
 fn specular(dotNH: f32) -> f32 {
     return light_u.specular_intensity * pow(max(dotNH, 0.0), light_u.specular_shininess);
 }
@@ -57,14 +71,22 @@ fn color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> 
     let dotNL = dot(N, L);
     let dotNH = dot(N, H);
 
-    let diffuse: f32 = diffuse(dotNL);
-    let specular: f32 = specular(dotNH);
+    var diffuse: f32 = diffuse(dotNL);
+    var specular: f32 = specular(dotNH);
+
+    if (light_u.is_two_side != 0) {
+        diffuse += 0.5 * diffuse(-dotNL);
+        specular += 0.5 * specular(-dotNH);
+    }
 
     let ambient = light_u.ambient_intensity;
     return vec4(color * (ambient + diffuse) + light_u.specular_color.xyz * specular, 1.0);
 }
 
+@group(1) @binding(0) var texture_data: texture_2d<f32>;
+@group(1) @binding(1) var texture_sampler: sampler;
+
 @fragment
-fn fs_main(@location(0) v_position: vec4<f32>, @location(1) v_normal: vec4<f32>) -> @location(0) vec4<f32> {
-    return color(v_position, v_normal, light_u.color.xyz);
+fn fs_main(in: Output) -> @location(0) vec4<f32> {
+    return color(in.v_position, in.v_normal, textureSample(texture_data, texture_sampler, in.v_uv).rgb + in.v_color.rgb);
 }

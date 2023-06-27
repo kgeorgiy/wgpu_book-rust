@@ -6,7 +6,7 @@ use winit::event::{DeviceEvent, ElementState};
 
 use webgpu_book::{Content, transforms::create_rotation};
 
-use crate::common::{Camera, CameraController, create_vertices, To, VertexC};
+use crate::common::{Camera, CameraController, create_vertices, To};
 use crate::common::mvp::{Mvp, MvpContent, MvpFactory, MvpMatrix};
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 
@@ -30,7 +30,7 @@ impl CameraState {
                 if self.mouse_pressed {
                     self.camera_controller.mouse_move(delta.0, delta.1);
                 }
-            },
+            }
             _ => (),
         }
         self.camera_controller.update_camera(&mut self.camera);
@@ -51,11 +51,8 @@ fn main() {
         camera,
         camera_controller: CameraController::new(0.005),
         mouse_pressed: false,
-    }).run::<VertexC, u16>(
-        "Chapter 6 Controlled camera",
-        include_str!("cube_face_colors.wgsl"),
-        &create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors),
-        wgpu::PrimitiveTopology::TriangleList,
-        None
-    );
+    })
+        .into_config(include_str!("cube_face_colors.wgsl"))
+        .with_vertices(&create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors))
+        .run_title("Chapter 6 Controlled camera");
 }

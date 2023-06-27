@@ -4,18 +4,18 @@ use core::f32::consts::PI;
 
 use cgmath::{Point3, point3};
 
-pub fn sinc(x: f32, y: f32) -> f32 {
+#[must_use] pub fn sinc(x: f32, y: f32) -> f32 {
     let r = (x * x + y * y).sqrt();
     if r == 0.0 { 1.0 } else { r.sin() / r }
 }
 
-pub fn peaks(x: f32, z: f32) -> f32 {
+#[must_use] pub fn peaks(x: f32, z: f32) -> f32 {
     3.0 * (1.0 - x) * (1.0 - x) * (-(x * x) - (z + 1.0) * (z + 1.0)).exp()
         - 10.0 * (x / 5.0 - x * x * x - z * z * z * z * z) * (-x * x - z * z).exp()
         - 1.0 / 3.0 * (-(x + 1.0) * (x + 1.0) - z * z).exp()
 }
 
-pub fn klein_bottle(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn klein_bottle(u: f32, v: f32) -> Point3<f32> {
     let (sin_u, cos_u) = u.sin_cos();
     let (sin_v, cos_v) = v.sin_cos();
     let cos_sin = cos_v * sin_u;
@@ -41,13 +41,13 @@ pub fn klein_bottle(u: f32, v: f32) -> Point3<f32> {
     )
 }
 
-pub fn wellenkugel(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn wellenkugel(u: f32, v: f32) -> Point3<f32> {
     let (sin_v, cos_v) = v.sin_cos();
     let (sin_cos_u, cos_cos_u) = u.cos().sin_cos();
     point3(cos_cos_u * sin_v, sin_cos_u, cos_cos_u * cos_v) * u
 }
 
-pub fn breather(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn breather(u: f32, v: f32) -> Point3<f32> {
     const A: f32 = 0.4; // where 0 < A < 1
 
     let aa1 = 1.0 - A * A;
@@ -66,7 +66,7 @@ pub fn breather(u: f32, v: f32) -> Point3<f32> {
     ) * 2.0 / de
 }
 
-pub fn seashell(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn seashell(u: f32, v: f32) -> Point3<f32> {
     let v2_cos2 = (v / 2.0).cos().powf(2.0);
     let v_sin = v.sin();
     let u_exp = u.exp();
@@ -80,7 +80,7 @@ pub fn seashell(u: f32, v: f32) -> Point3<f32> {
 }
 
 
-pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
     const A: f32 = 1.0;
 
     let pu = -u / (1.0 + A).sqrt() + (u.tan() * (1.0 + A).sqrt()).atan();
@@ -94,13 +94,13 @@ pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
     point3(x, r_uv * pu.cos(), r_uv * pu.sin())
 }
 
-pub fn sphere(u:f32, v:f32) -> Point3<f32> {
+#[must_use] pub fn sphere(u:f32, v:f32) -> Point3<f32> {
     let (sin_u, cos_u) = u.sin_cos();
     let (sin_v, cos_v) = v.sin_cos();
     point3(cos_v * cos_u, sin_v, cos_v * sin_u)
 }
 
-pub fn torus(u: f32, v: f32) -> Point3<f32> {
+#[must_use] pub fn torus(u: f32, v: f32) -> Point3<f32> {
     let (sin_u, cos_u) = u.sin_cos();
     let (sin_v, cos_v) = v.sin_cos();
     point3((1.0 + 0.3 * cos_v) * cos_u, 0.3 * sin_v, (1.0 + 0.3 * cos_v) * sin_u)

@@ -171,7 +171,7 @@ impl VertexNCT {
         }
     }
 
-    pub fn transform(&self, transform: Matrix4<f32>) -> Self {
+    #[must_use] pub fn transform(&self, transform: Matrix4<f32>) -> Self {
         VertexNCT {
             position: (transform * <Vector4<f32>>::from(self.position)).into(),
             ..*self

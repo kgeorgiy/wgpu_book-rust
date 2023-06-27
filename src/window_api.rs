@@ -21,7 +21,7 @@ impl Content for NoContent {}
 // CompositeContent
 
 pub struct CompositeContent {
-    parts: Vec<Box<dyn Content>>,
+    pub(crate) parts: Vec<Box<dyn Content>>,
 }
 
 impl<const L: usize> From<[Box<dyn Content>; L]> for CompositeContent {

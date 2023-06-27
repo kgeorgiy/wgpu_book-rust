@@ -28,5 +28,6 @@ fn main() {
         indices.push(i + 2);
     }
 
+
     common::run_example("Chapter 4. Hexagon (indexed)", &vertices, Some(&indices));
 }

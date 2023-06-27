@@ -29,5 +29,6 @@ fn create_mesh() -> Wireframe {
 }
 
 fn main() {
-    create_mesh().show("Chapter 7. Cube");
+    let self1 = create_mesh();
+    self1.into_config().run_title("Chapter 7. Cube");
 }

@@ -1,37 +1,20 @@
-use webgpu_book::{RenderConfiguration, TextureInfo};
+use webgpu_book::TextureInfo;
 
-use crate::common::light::{ProtoUniforms, TwoSideLightAux};
+use crate::common::light::TwoSideLightAux;
 
 pub use self::global_common::*;
 
 #[path = "../common/global_common.rs"]
 mod global_common;
 
-#[allow(dead_code)]
-pub fn proto_example(is_two_side: bool) -> ProtoUniforms<1, TwoSideLightAux> {
-    ProtoUniforms::example_aux(
-        include_str!("shader.wgsl").to_owned(),
-        None,
-        TwoSideLightAux::new(is_two_side)
-    )
-}
-
 pub fn run_example(title: &str, vertices: &[VertexNT]) -> ! {
     let texture_file = CmdArgs::next("brick");
-    let is_two_side = CmdArgs::next("false").parse().expect("true of false");
 
-    let proto = proto_example(is_two_side);
-    let configuration = RenderConfiguration {
-        textures: vec![TextureInfo {
-            file: format!("examples/ch10/assets/{texture_file}.png"),
-            u_mode: wgpu::AddressMode::Repeat,
-            v_mode: wgpu::AddressMode::Repeat,
-        }],
-        ..proto.config(
-            include_str!("shader.wgsl"),
-            wgpu::PrimitiveTopology::TriangleList,
-            vertices,
-        )
-    };
-    configuration.run_title(title);
+    let topology = wgpu::PrimitiveTopology::TriangleList;
+    TwoSideLightAux::example(include_str!("shader.wgsl")).into_config()
+        .with_vertices(vertices)
+        .with_topology(topology)
+        .with_textures([TextureInfo::repeated(format!("examples/ch10/assets/{texture_file}.png"))])
+        .run_title(title)
 }
+

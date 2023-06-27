@@ -1,4 +1,4 @@
-use webgpu_book::VertexBufferInfo;
+use webgpu_book::{PipelineConfiguration, VertexBufferInfo};
 
 pub use self::global_common::*;
 
@@ -21,6 +21,7 @@ impl VertexBufferInfo for Vertex {
 
 
 pub fn run_example(title: &str, vertices: &[Vertex], indices: Option<&[u16]>) -> ! {
-    Config::with_vertices(include_str!("triangle.wgsl"), vertices, indices)
-        .run_title(title)
+    PipelineConfiguration::new(include_str!("triangle.wgsl"))
+        .with_vertices_indices(vertices, indices)
+        .run_title(title);
 }

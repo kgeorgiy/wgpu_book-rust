@@ -20,7 +20,10 @@ pub fn run_example<V: VertexBufferInfo>(
     topology: wgpu::PrimitiveTopology,
     indices: Option<&[u16]>,
 ) {
-    MvpFactory::<(), MvpMatrix>::example(()).run(title, shader_source, vertices, topology, indices);
+    MvpFactory::<(), MvpMatrix>::example(()).into_config(shader_source)
+        .with_vertices_indices(vertices, indices)
+        .with_topology(topology)
+        .run_title(title);
 }
 
 

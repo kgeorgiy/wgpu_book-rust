@@ -62,6 +62,14 @@ pub struct TextureInfo {
 }
 
 impl TextureInfo {
+    #[must_use] pub fn repeated(file: String) -> Self {
+        TextureInfo {
+            file,
+            u_mode: wgpu::AddressMode::Repeat,
+            v_mode: wgpu::AddressMode::Repeat,
+        }
+    }
+
     pub(crate) fn create_texture(&self, wg: &WebGPUDevice) -> Result<Texture> {
         let img = ImageReader::open(self.file.as_str())
             .context(format!("Texture file '{}' missing", self.file))?.decode()?;

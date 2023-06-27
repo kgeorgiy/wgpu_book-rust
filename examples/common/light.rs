@@ -6,11 +6,10 @@ use core::time::Duration;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Angle, EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, PipelineConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
-use webgpu_book::UniformsConfiguration;
 
-use super::{CmdArgs, Config, To, Uniform, VertexN};
+use super::{CmdArgs, To, Uniform, VertexN};
 
 
 // Camera
@@ -25,11 +24,11 @@ pub struct OglCamera {
 }
 
 impl OglCamera {
-    pub fn new(eye: Point3<f32>, look_at: Vector3<f32>, up: Vector3<f32>, fovy: Rad<f32>) -> Self {
+    #[must_use] pub fn new(eye: Point3<f32>, look_at: Vector3<f32>, up: Vector3<f32>, fovy: Rad<f32>) -> Self {
         Self { eye, look_at, up, fovy, projection: create_projection(1.0, fovy) }
     }
 
-    pub fn view(&self) -> Matrix4<f32> {
+    #[must_use] pub fn view(&self) -> Matrix4<f32> {
         Matrix4::look_to_rh(self.eye, self.look_at, self.up)
     }
 
@@ -54,7 +53,7 @@ pub struct FragmentUniforms {
 }
 
 impl FragmentUniforms {
-    pub fn new(eye: [f32; 4], light: [f32; 4]) -> Self {
+    #[must_use] pub fn new(eye: [f32; 4], light: [f32; 4]) -> Self {
         Self { eye_position: eye, light_position: light }
     }
 }
@@ -104,7 +103,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new(model: Matrix4<f32>) -> Self {
+    #[must_use] pub fn new(model: Matrix4<f32>) -> Self {
         Self { model, rotation: Matrix4::identity() }
     }
 }
@@ -181,26 +180,20 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
     }
 
     pub fn run<V: VertexBufferInfo + Into<VertexN>>(self, title: &str, vertices: &[V]) -> ! {
+        self.into_advanced_config(vertices).run_title(title)
+    }
+
+    fn into_advanced_config<V: VertexBufferInfo + Into<VertexN>>(self, vertices: &[V]) -> PipelineConfiguration {
         if CmdArgs::is("wireframe") {
             let vertices_n = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
-            self.run_wireframe(title, &vertices_n, 0.1)
+            self.wireframe(&vertices_n, 0.1)
         } else {
-            self.run_vertices(title, vertices)
+            println!("Here");
+            self.into_config().with_vertices(vertices)
         }
     }
 
-    pub fn run_vertices<V: VertexBufferInfo>(self, title: &str, vertices: &[V]) -> ! {
-        let shader_source = self.shader_source.clone();
-        self.run_wgpu(
-            title,
-            shader_source.as_str(),
-            wgpu::PrimitiveTopology::TriangleList,
-            vertices,
-        )
-    }
-
-    #[allow(dead_code)]
-    pub fn run_wireframe(self, title: &str, vertices: &[VertexN], normal_len: f32) -> ! {
+    fn wireframe(self, vertices: &[VertexN], normal_len: f32) -> PipelineConfiguration {
         let mut wireframe_vertices: Vec<VertexN> = Vec::with_capacity(vertices.len() * 4);
         for face in vertices.chunks_exact(3) {
             #[allow(clippy::indexing_slicing)]
@@ -212,47 +205,27 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
             }
         }
 
-        self.run_wgpu(
-            title,
-            include_str!("wireframe.wgsl"),
-            wgpu::PrimitiveTopology::LineList,
-            &wireframe_vertices
-        );
+        self.into_config()
+            .with_shader(include_str!("wireframe.wgsl"))
+            .with_vertices(&wireframe_vertices)
+            .with_topology(wgpu::PrimitiveTopology::LineList)
     }
 
-    pub fn run_wgpu<V: VertexBufferInfo>(
-        self,
-        title: &str,
-        shader_source: &str,
-        topology: wgpu::PrimitiveTopology,
-        vertices: &[V]
-    ) -> ! {
-        self.config(shader_source, topology, vertices).run_title(title);
-    }
-
-    pub fn config<V: VertexBufferInfo>(
-        self,
-        shader_source: &str,
-        topology: wgpu::PrimitiveTopology,
-        vertices: &[V]
-    ) -> RenderConfiguration {
+    pub fn into_config(self) -> PipelineConfiguration {
         let models: [ModelUniforms; ML] = self.models.to();
         let camera: CameraUniform = self.camera.to();
-        RenderConfiguration {
-            topology,
-            cull_mode: self.cull_mode,
-            instances: ML,
-            uniforms: UniformsConfiguration::new(
+        PipelineConfiguration::new(self.shader_source.as_str())
+            .with_cull_mode(self.cull_mode)
+            .with_instances(ML)
+            .with_uniforms(
                 [
                     BufferInfo::buffer_format("Models uniform", &[models], wgpu::ShaderStages::VERTEX),
                     BufferInfo::buffer_format("Camera uniform", &[camera], wgpu::ShaderStages::VERTEX),
                     BufferInfo::buffer_format("Fragment uniform", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
                     BufferInfo::buffer_format("Light uniform", &[self.light], wgpu::ShaderStages::FRAGMENT),
                 ],
-                Box::new(self)
-            ),
-            ..Config::with_vertices(shader_source, vertices, None::<&[u16]>)
-        }
+                Box::new(self),
+            )
     }
 
     pub fn example_models(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA, models: [Matrix4<f32>; ML]) -> ProtoUniforms<ML, LA> {
@@ -339,10 +312,19 @@ pub struct TwoSideLightAux {
 }
 
 impl TwoSideLightAux {
-    pub fn new(is_two_side: bool) -> Self {
+    #[must_use] pub fn new(is_two_side: bool) -> Self {
         Self {
             is_two_side: i32::from(is_two_side),
             padding: [0; 12]
         }
+    }
+
+    #[must_use] pub fn example(shader: &str) -> ProtoUniforms<1, TwoSideLightAux> {
+        let is_two_side = CmdArgs::next("false").parse().expect("true of false");
+        ProtoUniforms::example_aux(
+            shader.to_owned(),
+            None,
+            Self::new(is_two_side),
+        )
     }
 }

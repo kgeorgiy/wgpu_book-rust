@@ -30,5 +30,5 @@ fn create_mesh(r: f32, u: usize, v: usize) -> Wireframe {
 }
 
 fn main() {
-    create_mesh(1.7, 20, 20).show("Chapter 7. Sphere");
+    create_mesh(1.7, 20, 20).into_config().run_title("Chapter 7. Sphere");
 }

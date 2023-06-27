@@ -1,4 +1,4 @@
-cargo clippy --examples -- ^
+cargo clippy %* --examples -- ^
     -W clippy::pedantic ^
     -W clippy::restriction ^
     -A clippy::cast_precision_loss ^

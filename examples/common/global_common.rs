@@ -5,7 +5,6 @@ use core::ops::{Deref, DerefMut};
 
 use bytemuck::Pod;
 
-use webgpu_book::{BufferInfo, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
 pub use vertex::*;
 use webgpu_book::{BufferWriter, TypedBufferWriter};
 
@@ -16,28 +15,6 @@ pub mod light;
 pub mod surface_data;
 pub mod mvp;
 mod vertex;
-
-pub(crate) struct Config;
-
-impl Config {
-    pub fn with_vertices<V, I>(shader_source: &str, vertices: &[V], indices: Option<&[I]>)
-        -> RenderConfiguration where V: VertexBufferInfo, I: IndexBufferInfo
-    {
-        RenderConfiguration {
-            vertices: indices.map_or(vertices.len(), <[I]>::len),
-            vertex_buffers: vec![V::buffer("Vertices", vertices)],
-            index_buffer: indices.map(|idx| I::buffer("Indices", idx)),
-            ..Self::with_shader(shader_source)
-        }
-    }
-
-    pub(crate) fn with_shader(shader_source: &str) -> RenderConfiguration {
-        RenderConfiguration {
-            shader_source: shader_source.to_owned(),
-            ..RenderConfiguration::default()
-        }
-    }
-}
 
 pub(crate) struct CmdArgs;
 

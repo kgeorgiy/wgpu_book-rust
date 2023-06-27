@@ -1,7 +1,7 @@
-use crate::common02::run_example;
-
-mod common02;
+use webgpu_book::PipelineConfiguration;
 
 fn main() -> ! {
-    run_example("Chapter 02. First triangle", include_str!("first_triangle.wgsl"));
+    PipelineConfiguration::new(include_str!("first_triangle.wgsl"))
+        .with_vertex_count(3)
+        .run_title("Chapter 02. First triangle");
 }

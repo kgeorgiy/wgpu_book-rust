@@ -1,6 +1,6 @@
 use cgmath::{Matrix4, SquareMatrix};
 
-use webgpu_book::{RenderConfiguration, TextureInfo};
+use webgpu_book::{PipelineConfiguration, TextureInfo};
 
 use crate::common::light::{ProtoUniforms, TwoSideLightAux};
 
@@ -11,30 +11,23 @@ mod global_common;
 
 #[allow(dead_code)]
 pub fn run_example(title: &str, vertices: &[VertexNCT]) -> ! {
-    run_example_models(title, vertices, [Matrix4::identity()])
+    example_models(vertices, [Matrix4::identity()])
+        .run_title(title)
 }
 
-pub fn run_example_models<const T: usize>(title: &str, vertices: &[VertexNCT], models: [Matrix4<f32>; T]) -> ! {
+#[must_use] pub fn example_models<const T: usize>(vertices: &[VertexNCT], models: [Matrix4<f32>; T]) -> PipelineConfiguration {
     let texture_file = CmdArgs::next("whitesquare2");
     let is_two_side = CmdArgs::next("false").parse().expect("true of false");
 
     let light_aux = TwoSideLightAux::new(is_two_side);
 
-    RenderConfiguration {
-        textures: vec![TextureInfo {
-            file: format!("examples/ch11/assets/{texture_file}.png"),
-            u_mode: wgpu::AddressMode::Repeat,
-            v_mode: wgpu::AddressMode::Repeat,
-        }],
-        ..ProtoUniforms::example_models(
-            String::new(),
-            None,
-            light_aux,
-            models,
-        ).config(
-            include_str!("instances.wgsl"),
-            wgpu::PrimitiveTopology::TriangleList,
-            vertices,
-        )
-    }.run_title(title)
+    ProtoUniforms::example_models(
+        include_str!("instances.wgsl").to_owned(),
+        None,
+        light_aux,
+        models,
+    )
+        .into_config()
+        .with_vertices(vertices)
+        .with_textures([TextureInfo::repeated(format!("examples/ch11/assets/{texture_file}.png"))])
 }

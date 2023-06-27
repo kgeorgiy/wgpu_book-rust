@@ -1,14 +1,20 @@
 use wgpu::{IndexFormat, PrimitiveTopology};
 
-use webgpu_book::RenderConfiguration;
+use webgpu_book::PipelineConfiguration;
 
-use crate::global_common::{CmdArgs, Config};
+use crate::global_common::CmdArgs;
 
 #[path = "../common/global_common.rs"]
 mod global_common;
 
 fn main() {
-    let primitive_type = CmdArgs::next("triangle-strip");
+    let primitive_type = CmdArgs::next_known(&[
+        "triangle-strip",
+        "point-list",
+        "line-list",
+        "line-strip",
+        "triangle-list",
+    ]);
 
     let (topology, strip_index_format) = match primitive_type.as_str() {
         "point-list" => (PrimitiveTopology::PointList, None),
@@ -19,12 +25,9 @@ fn main() {
         _ => panic!("Unknown type {primitive_type}"),
     };
 
-    let title = format!("Ch4. Topology: {primitive_type}");
-    RenderConfiguration {
-        vertices: 6,
-        topology,
-        strip_index_format,
-        cull_mode: None,
-        ..Config::with_shader(include_str!("topology.wgsl"))
-    }.run_title(title.as_str())
+    PipelineConfiguration::new(include_str!("topology.wgsl"))
+        .with_vertex_count(6)
+        .with_full_topology(topology, strip_index_format)
+        .with_cull_mode(None)
+        .run_title(format!("Chapter 4. Topology: {primitive_type}").as_str())
 }

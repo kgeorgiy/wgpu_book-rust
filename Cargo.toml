@@ -150,3 +150,7 @@ path = "examples/ch12/ex_instances.rs"
 [[example]]
 name = "ch12_different"
 path = "examples/ch12/ex_different.rs"
+
+[[example]]
+name = "ch12_pipelines"
+path = "examples/ch12/ex_pipelines.rs"

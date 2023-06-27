@@ -11,55 +11,136 @@ mod window_api;
 mod bindings;
 mod uniforms;
 
-// pub struct RenderConfiguration {
-//     pub pipelines: Vec<PipelineConfiguration<>>
-// }
 
+// RenderConfiguration
 
 pub struct RenderConfiguration {
-    pub _placeholder: (), // Waiting for #[non_exhaustive(pub)]
-    pub shader_source: String,
-    pub vertices: usize,
-    pub topology: wgpu::PrimitiveTopology,
-    pub cull_mode: Option<wgpu::Face>,
-    pub strip_index_format: Option<wgpu::IndexFormat>,
-    pub vertex_buffers: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
-    pub index_buffer: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
-    pub uniforms: Option<UniformsConfiguration>,
-    pub textures: Vec<TextureInfo>,
-    pub instances: usize,
+    pub pipelines: Vec<PipelineConfiguration<>>
 }
 
 impl RenderConfiguration {
     pub fn run_title(self, title: &str) -> ! {
-        window::show(&WindowConfiguration { title }, move |window| {
-            webgpu::WebGPUContent::content(window, self).expect("Valid configuration")
-        });
+        run_wgpu(&WindowConfiguration { title }, self);
     }
 }
 
-impl Default for RenderConfiguration {
-    fn default() -> Self {
-        RenderConfiguration {
-            _placeholder: (),
-            shader_source: String::new(),
-            vertices: 0,
+
+// PipelineConfiguration
+
+pub struct PipelineConfiguration {
+    shader_source: String,
+    vertex_count: usize,
+    topology: wgpu::PrimitiveTopology,
+    cull_mode: Option<wgpu::Face>,
+    strip_index_format: Option<wgpu::IndexFormat>,
+    vertices: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
+    indices: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
+    uniforms: Option<UniformsConfiguration>,
+    textures: Vec<TextureInfo>,
+    instances: usize,
+}
+
+impl PipelineConfiguration {
+    #[must_use] pub fn new(shader_source: &str) -> Self {
+        PipelineConfiguration {
+            shader_source: shader_source.to_owned(),
+            vertex_count: 0,
             topology: wgpu::PrimitiveTopology::TriangleList,
             cull_mode: Some(wgpu::Face::Back),
             strip_index_format: None,
-            vertex_buffers: vec![],
-            index_buffer: None,
+            vertices: vec![],
+            indices: None,
             uniforms: None,
             textures: vec![],
             instances: 1,
         }
+    }
+
+    #[must_use] pub fn with_shader(mut self, shader_source: &str) -> Self {
+        self.shader_source = shader_source.to_owned();
+        self
+    }
+
+    #[must_use] pub fn with_indexed_vertices<V, I>(mut self, vertices: &[V], indices: &[I])
+        -> Self where V: VertexBufferInfo, I: IndexBufferInfo
+    {
+        self.vertices = vec![V::buffer("Vertices", vertices)];
+        self.indices = Some(I::buffer("Indices", indices));
+        self.with_vertex_count(indices.len())
+    }
+
+    #[must_use] pub fn with_vertices<V: VertexBufferInfo>(mut self, vertices: &[V]) -> Self {
+        self.vertices = vec![V::buffer("Vertices", vertices)];
+        self.with_vertex_count(vertices.len())
+    }
+
+    #[must_use] pub fn with_vertices_indices<V, I>(self, vertices: &[V], indices: Option<&[I]>)
+        -> Self where V: VertexBufferInfo, I: IndexBufferInfo
+    {
+        match indices {
+            None => self.with_vertices(vertices),
+            Some(idx) => self.with_indexed_vertices(vertices, idx),
+        }
+    }
+
+    #[must_use] pub fn with_topology(mut self, topology: wgpu::PrimitiveTopology) -> Self {
+        self.topology = topology;
+        self
+    }
+
+    #[must_use] pub fn with_full_topology(
+        mut self,
+        topology: wgpu::PrimitiveTopology,
+        strip_index_format: Option<wgpu::IndexFormat>,
+    ) -> Self {
+        self.strip_index_format = strip_index_format;
+        self.with_topology(topology)
+    }
+
+
+    #[must_use] pub fn with_strip(mut self, topology: wgpu::PrimitiveTopology) -> Self {
+        self.topology = topology;
+        self
+    }
+
+    #[must_use] pub fn with_textures<const L: usize>(mut self, textures: [TextureInfo; L]) -> Self {
+        self.textures = textures.into_iter().collect();
+        self
+    }
+
+    #[must_use] pub fn with_cull_mode(mut self, cull_mode: Option<wgpu::Face>) -> Self {
+        self.cull_mode = cull_mode;
+        self
+    }
+
+    #[must_use] pub fn with_uniforms<const UL: usize>(
+        mut self,
+        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
+        content_factory: Box<dyn ContentFactory<UL>>
+    ) -> Self {
+        self.uniforms = Some(UniformsConfiguration::new(buffers, content_factory));
+        self
+    }
+
+    #[must_use] pub fn with_instances(mut self, instances: usize) -> Self {
+        self.instances = instances;
+        self
+    }
+
+    #[must_use] pub fn with_vertex_count(mut self, vertices: usize) -> Self {
+        self.vertex_count = vertices;
+        self
+    }
+
+    pub fn run_title(self, title: &str) -> ! {
+        RenderConfiguration { pipelines: vec![self] }.run_title(title);
     }
 }
 
 
 pub fn run_wgpu(window_config: &WindowConfiguration, render_config: RenderConfiguration) -> ! {
     window::show(window_config, move |window| {
-        webgpu::WebGPUContent::content(window, render_config).expect("Valid configuration")
+        webgpu::WebGPURender::content(window, render_config).expect("Valid configuration")
     })
 }
 

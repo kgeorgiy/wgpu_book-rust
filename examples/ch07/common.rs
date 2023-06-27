@@ -1,4 +1,5 @@
 use cgmath::Deg;
+use webgpu_book::PipelineConfiguration;
 
 use crate::common::mvp::{AnimationState, MvpMatrix};
 use crate::common::vertex_data::cylinder_position;
@@ -36,15 +37,13 @@ impl Wireframe {
         }
     }
 
-    pub fn show(self, title: &str) {
-        AnimationState::run::<MvpMatrix, Vertex, u16>(
-            title,
+    pub fn into_config(self) -> PipelineConfiguration {
+        AnimationState::example_config_2::<MvpMatrix, Vertex, u16>(
             include_str!("../ch06/line3d.wgsl"),
-            1.0,
             &self.into_vec(),
             wgpu::PrimitiveTopology::LineList,
-            None,
-        );
+            None
+        )
     }
 }
 

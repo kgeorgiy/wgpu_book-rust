@@ -3,7 +3,7 @@ use core::time::Duration;
 
 use anyhow::Result;
 
-use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer, usize_as_u32};
+use crate::{CompositeContent, Content, RawWindow, PipelineConfiguration, SmartBuffer, usize_as_u32, RenderConfiguration};
 use crate::bindings::Textures;
 use crate::uniforms::Uniforms;
 
@@ -65,12 +65,12 @@ impl WebGPUDevice {
 
 // WegGPUContent
 
-pub(crate) struct WebGPUContent {
-    device: WebGPUDevice,
+pub(crate) struct WebGPURender {
+    wg: WebGPUDevice,
     pipelines: Vec<Pipeline>,
 }
 
-impl WebGPUContent {
+impl WebGPURender {
     pub fn content<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content + 'a>> {
         pollster::block_on(Self::content_async(window, conf))
     }
@@ -81,13 +81,27 @@ impl WebGPUContent {
     ) -> Result<Box<dyn Content + 'a>> {
         let wg = WebGPUDevice::new(window).await;
 
-        let vertex_buffers = conf.vertex_buffers.into_iter()
-            .map(|descriptor| descriptor.create_buffer(&wg))
+        let (pipelines, mut contents): (Vec<Pipeline>, Vec<Box<dyn Content>>)
+            = conf.pipelines.into_iter()
+                .map(|pipeline| Self::configure_pipeline(pipeline, &wg))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter().unzip();
+
+        contents.push(Box::new(WebGPURender { wg, pipelines }));
+
+        Ok(Box::new(CompositeContent { parts: contents }))
+    }
+
+    fn configure_pipeline(conf: PipelineConfiguration, wg: &WebGPUDevice)
+        -> Result<(Pipeline, Box<dyn Content>)>
+    {
+        let vertex_buffers = conf.vertices.into_iter()
+            .map(|descriptor| descriptor.create_buffer(wg))
             .collect::<Vec<_>>();
-        let index_buffer = conf.index_buffer
-            .map(|descriptor| descriptor.create_buffer(&wg));
-        let uniforms = Uniforms::new(&wg, conf.uniforms);
-        let textures = Textures::new(&wg, &conf.textures)?;
+        let index_buffer = conf.indices
+            .map(|descriptor| descriptor.create_buffer(wg));
+        let uniforms = Uniforms::new(wg, conf.uniforms);
+        let textures = Textures::new(wg, &conf.textures)?;
 
         let render_pipeline = Self::create_pipeline(
             &wg.device,
@@ -107,7 +121,7 @@ impl WebGPUContent {
 
         let pipeline = Pipeline {
             pipeline: render_pipeline,
-            vertices: usize_as_u32(conf.vertices),
+            vertices: usize_as_u32(conf.vertex_count),
             vertex_buffers: vertex_buffers.into_iter()
                 .map(|buffer| buffer.buffer)
                 .collect(),
@@ -115,14 +129,7 @@ impl WebGPUContent {
             bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
             instances: usize_as_u32(conf.instances)
         };
-
-
-        let content = Box::new(WebGPUContent {
-            device: wg,
-            pipelines: vec![pipeline]
-        });
-
-        Ok(Box::new(CompositeContent::from([uniforms.content, content])))
+        Ok((pipeline, uniforms.content))
     }
 
     fn create_pipeline<'a>(
@@ -171,16 +178,16 @@ impl WebGPUContent {
     }
 }
 
-impl Content for WebGPUContent {
+impl Content for WebGPURender {
     fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
-            self.device.resize(width, height);
+            self.wg.resize(width, height);
         }
     }
 
     fn update(&mut self, _dt: Duration) {
         let frame = self
-            .device
+            .wg
             .surface
             .get_current_texture()
             .expect("Current texture");
@@ -188,14 +195,14 @@ impl Content for WebGPUContent {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = self
-            .device
+            .wg
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         {
-            let depth_texture = self.device.device.create_texture(&wgpu::TextureDescriptor {
+            let depth_texture = self.wg.device.create_texture(&wgpu::TextureDescriptor {
                 size: wgpu::Extent3d {
-                    width: self.device.surface_config.width,
-                    height: self.device.surface_config.height,
+                    width: self.wg.surface_config.width,
+                    height: self.wg.surface_config.height,
                     depth_or_array_layers: 1,
                 },
                 mip_level_count: 1,
@@ -236,7 +243,7 @@ impl Content for WebGPUContent {
                 pipeline.render(&mut render_pass);
             }
         }
-        self.device.queue.submit(Some(encoder.finish()));
+        self.wg.queue.submit(Some(encoder.finish()));
         frame.present();
     }
 }

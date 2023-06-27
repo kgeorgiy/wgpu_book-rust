@@ -23,5 +23,5 @@ fn main() {
             })
         )
         .collect();
-    run_example("Chapter 12. Different", &vertices);
+    run_example("Chapter 12. Different shapes", &vertices);
 }

@@ -1,6 +1,6 @@
-use webgpu_book::{RenderConfiguration, TextureInfo};
+use webgpu_book::TextureInfo;
 
-use crate::common::light::{ProtoUniforms, TwoSideLightAux};
+use crate::common::light::TwoSideLightAux;
 
 pub use self::global_common::*;
 
@@ -9,23 +9,10 @@ mod global_common;
 
 pub fn run_example(title: &str, vertices: &[VertexNCT]) -> ! {
     let texture_file = CmdArgs::next("whitesquare2");
-    let is_two_side = CmdArgs::next("false").parse().expect("true of false");
 
-    let configuration = RenderConfiguration {
-        textures: vec![TextureInfo {
-            file: format!("examples/ch11/assets/{texture_file}.png"),
-            u_mode: wgpu::AddressMode::Repeat,
-            v_mode: wgpu::AddressMode::Repeat,
-        }],
-        ..ProtoUniforms::example_aux(
-            include_str!("shader.wgsl").to_owned(),
-            None,
-            TwoSideLightAux::new(is_two_side)
-        ).config(
-            include_str!("shader.wgsl"),
-            wgpu::PrimitiveTopology::TriangleList,
-            vertices,
-        )
-    };
-    configuration.run_title(title);
+    TwoSideLightAux::example(include_str!("shader.wgsl")).into_config()
+        .with_vertices(vertices)
+        .with_topology(wgpu::PrimitiveTopology::TriangleList)
+        .with_textures([TextureInfo::repeated(format!("examples/ch11/assets/{texture_file}.png"))])
+        .run_title(title)
 }

@@ -2,7 +2,7 @@
 
 use cgmath::{Angle, Deg, Point3, point3};
 
-pub fn i8_as_f32<const R: usize, const C: usize>(values: [[i8; C]; R]) -> [[f32; C]; R] {
+#[must_use] pub fn i8_as_f32<const R: usize, const C: usize>(values: [[i8; C]; R]) -> [[f32; C]; R] {
     values.map(|vertex| vertex.map(f32::from))
 }
 
@@ -137,7 +137,7 @@ pub const CUBE_INDEX_DATA: CubeIndexData = {
     }
 };
 
-pub fn sphere_position(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Point3<f32> {
+#[must_use] pub fn sphere_position(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Point3<f32> {
     let (sin_theta, cos_theta) = theta.sin_cos();
     let (sin_phi, cos_phi) = phi.sin_cos();
     point3(r * sin_theta * cos_phi, r * cos_theta, -r * sin_theta * sin_phi)
@@ -148,7 +148,7 @@ pub fn cylinder_position<T: Into<Deg<f32>>>(r: f32, y: f32, theta: T) -> Point3<
     point3(r * cos_theta, y, -r * sin_theta)
 }
 
-pub fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Point3<f32> {
+#[must_use] pub fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Point3<f32> {
     let (sin_v, cos_v) = v.sin_cos();
     let (sin_u, cos_u) = u.sin_cos();
     let r = r_torus + r_tube * cos_v;

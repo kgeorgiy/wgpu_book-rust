@@ -30,5 +30,5 @@ fn create_mesh(top_r: f32, bot_r: f32, height: f32, n: usize) -> Wireframe {
 }
 
 fn main() {
-    create_mesh(0.5, 1.5, 2.0, 20).show("Chapter 7. Cone");
+    create_mesh(0.5, 1.5, 2.0, 20).into_config().run_title("Chapter 7. Cone");
 }

@@ -1,7 +1,7 @@
-use crate::common02::run_example;
-
-mod common02;
+use webgpu_book::PipelineConfiguration;
 
 fn main() -> ! {
-    run_example("Chapter 02. Triangle vertex color", include_str!("triangle_vertex_color.wgsl"));
+    PipelineConfiguration::new(include_str!("triangle_vertex_color.wgsl"))
+        .with_vertex_count(3)
+        .run_title("Chapter 02. Triangle vertex color");
 }
