@@ -134,13 +134,18 @@ pub fn parametric_surface_data<V: From<VertexNCT> + Copy>(
 }
 
 
-pub fn surface_vertices<V: From<VertexNCT> + Copy>(colormap: &Colormap, global_uv: bool) -> (String, Vec<V>) {
+pub fn read_args_surface_vertices<V: From<VertexNCT> + Copy>(colormap: &Colormap, global_uv: bool) -> (String, Vec<V>) {
     let kind = CmdArgs::next_known(&[
         "sinc", "peaks",
         "klein", "wellen", "seashell", "sievert", "breather",
         "torus", "sphere",
     ]);
-    let vertices: Vec<V> = match kind.as_str() {
+    let vertices = surface_vertices(kind.as_str(), colormap, global_uv);
+    (kind, vertices)
+}
+
+pub fn surface_vertices<V: From<VertexNCT> + Copy>(kind: &str, colormap: &Colormap, global_uv: bool) -> Vec<V> {
+    let vertices: Vec<V> = match kind {
         "sinc" => simple_surface_data(
             &sinc, colormap, global_uv,
             (-8.0, 8.0, 30), (-8.0, 8.0, 30), 2.0,
@@ -179,5 +184,5 @@ pub fn surface_vertices<V: From<VertexNCT> + Copy>(colormap: &Colormap, global_u
         ),
         _ => panic!("Unknown chart type"),
     };
-    (kind, vertices)
+    vertices
 }

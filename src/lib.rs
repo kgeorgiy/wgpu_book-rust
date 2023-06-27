@@ -1,6 +1,7 @@
 pub use crate::bindings::TextureInfo;
 pub use crate::buffer::*;
 pub use crate::window_api::*;
+pub use crate::uniforms::*;
 
 pub mod buffer;
 pub mod transforms;
@@ -8,8 +9,14 @@ mod webgpu;
 pub mod window;
 mod window_api;
 mod bindings;
+mod uniforms;
 
-pub struct RenderConfiguration<const UL: usize> {
+// pub struct RenderConfiguration {
+//     pub pipelines: Vec<PipelineConfiguration<>>
+// }
+
+
+pub struct RenderConfiguration {
     pub _placeholder: (), // Waiting for #[non_exhaustive(pub)]
     pub shader_source: String,
     pub vertices: usize,
@@ -18,11 +25,12 @@ pub struct RenderConfiguration<const UL: usize> {
     pub strip_index_format: Option<wgpu::IndexFormat>,
     pub vertex_buffers: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
     pub index_buffer: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
-    pub uniforms: Option<UniformsConfiguration<UL>>,
+    pub uniforms: Option<UniformsConfiguration>,
     pub textures: Vec<TextureInfo>,
+    pub instances: usize,
 }
 
-impl<const UL: usize> RenderConfiguration<UL> {
+impl RenderConfiguration {
     pub fn run_title(self, title: &str) -> ! {
         window::show(&WindowConfiguration { title }, move |window| {
             webgpu::WebGPUContent::content(window, self).expect("Valid configuration")
@@ -30,7 +38,7 @@ impl<const UL: usize> RenderConfiguration<UL> {
     }
 }
 
-impl<const UL: usize> Default for RenderConfiguration<UL> {
+impl Default for RenderConfiguration {
     fn default() -> Self {
         RenderConfiguration {
             _placeholder: (),
@@ -43,45 +51,13 @@ impl<const UL: usize> Default for RenderConfiguration<UL> {
             index_buffer: None,
             uniforms: None,
             textures: vec![],
+            instances: 1,
         }
     }
 }
 
 
-// UniformConfiguration and associated types
-
-pub struct UniformsConfiguration<const UL: usize> {
-    content_factory: Box<dyn ContentFactory<UL>>,
-    buffers: Vec<SmartBufferDescriptor<wgpu::ShaderStages>>,
-}
-
-impl<const UL: usize> UniformsConfiguration<UL> {
-    #[must_use] pub fn new(
-        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
-        content_factory: Box<dyn ContentFactory<UL>>
-    ) -> Option<Self> {
-        Some(Self { content_factory, buffers: buffers.into_iter().collect() })
-    }
-}
-
-pub trait ContentFactory<const UL: usize> {
-    fn create(&self, uniforms: [BufferWriter; UL]) -> Box<dyn Content>;
-
-    fn _unsafe_create(&self, uniforms: Vec<BufferWriter>) -> Box<dyn Content> {
-        self.create(uniforms.try_into().expect("valid size"))
-    }
-}
-
-struct NoContentFactory;
-
-impl ContentFactory<0> for NoContentFactory {
-    fn create(&self, _uniforms: [BufferWriter; 0]) -> Box<dyn Content> {
-        Box::new(NoContent)
-    }
-}
-
-
-pub fn run_wgpu<const UL: usize>(window_config: &WindowConfiguration, render_config: RenderConfiguration<UL>) -> ! {
+pub fn run_wgpu(window_config: &WindowConfiguration, render_config: RenderConfiguration) -> ! {
     window::show(window_config, move |window| {
         webgpu::WebGPUContent::content(window, render_config).expect("Valid configuration")
     })

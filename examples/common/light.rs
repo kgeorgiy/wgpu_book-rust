@@ -4,10 +4,11 @@ use core::f32::consts::PI;
 use core::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
+use cgmath::{Angle, EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, UniformsConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
+use webgpu_book::UniformsConfiguration;
 
 use super::{CmdArgs, Config, To, Uniform, VertexN};
 
@@ -96,7 +97,17 @@ impl<A: Pod> LightUniforms<A> {
 
 // Model, ModelUniforms
 
-struct Model(Matrix4<f32>);
+#[derive(Clone, Debug)]
+pub struct Model {
+    model: Matrix4<f32>,
+    rotation: Matrix4<f32>,
+}
+
+impl Model {
+    pub fn new(model: Matrix4<f32>) -> Self {
+        Self { model, rotation: Matrix4::identity() }
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -107,10 +118,17 @@ pub struct ModelUniforms {
 
 impl To<ModelUniforms> for Model {
     fn to(&self) -> ModelUniforms {
+        let model = self.model * self.rotation;
         ModelUniforms {
-            points: self.0.into(),
-            vectors: self.0.invert().expect("invertible matrix").transpose().into(),
+            vectors: model.invert().expect("invertible matrix").transpose().into(),
+            points: model.into(),
         }
+    }
+}
+
+impl<const L: usize> To<[ModelUniforms; L]> for [Model; L] {
+    fn to(&self) -> [ModelUniforms; L] {
+        self.clone().map(|model| model.to())
     }
 }
 
@@ -131,7 +149,8 @@ impl To<CameraUniform> for OglCamera {
 
 // ProtoUniforms
 
-pub struct ProtoUniforms<LA: Pod> {
+pub struct ProtoUniforms<const ML: usize, LA: Pod> {
+    models: [Model; ML],
     camera: OglCamera,
     fragment: FragmentUniforms,
     light: LightUniforms<LA>,
@@ -140,8 +159,9 @@ pub struct ProtoUniforms<LA: Pod> {
     cull_mode: Option<wgpu::Face>,
 }
 
-impl<LA: Pod> ProtoUniforms<LA> {
+impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
     pub fn new(
+        models: [Model; ML],
         camera: OglCamera,
         fragment: FragmentUniforms,
         light: LightUniforms<LA>,
@@ -150,6 +170,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         cull_mode: Option<wgpu::Face>
     ) -> Self {
         ProtoUniforms {
+            models,
             camera,
             fragment,
             light,
@@ -157,26 +178,6 @@ impl<LA: Pod> ProtoUniforms<LA> {
             shader_source,
             cull_mode,
         }
-    }
-
-    pub fn example_aux(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA) -> Self {
-        let eye = point3(3.0, 1.5, 3.0);
-        let look_direction = -eye.to_vec();
-        let up_direction = Vector3::unit_y();
-        let fovy = Rad(2.0 * PI / 5.0);
-
-        let side = look_direction.cross(up_direction);
-        Self::new(
-            OglCamera::new(eye, look_direction, up_direction, fovy),
-            FragmentUniforms::new(
-                eye.to_homogeneous().into(),
-                (side.normalize() - look_direction.normalize() * 2.0).extend(0.0).into()
-            ),
-            LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
-            1.0,
-            shader_source,
-            cull_mode,
-        )
     }
 
     pub fn run<V: VertexBufferInfo + Into<VertexN>>(self, title: &str, vertices: &[V]) -> ! {
@@ -234,15 +235,16 @@ impl<LA: Pod> ProtoUniforms<LA> {
         shader_source: &str,
         topology: wgpu::PrimitiveTopology,
         vertices: &[V]
-    ) -> RenderConfiguration<4> {
-        let model: ModelUniforms = self.model().to();
-        let camera: CameraUniform = self.camera().to();
+    ) -> RenderConfiguration {
+        let models: [ModelUniforms; ML] = self.models.to();
+        let camera: CameraUniform = self.camera.to();
         RenderConfiguration {
             topology,
             cull_mode: self.cull_mode,
+            instances: ML,
             uniforms: UniformsConfiguration::new(
                 [
-                    BufferInfo::buffer_format("Model uniform", &[model], wgpu::ShaderStages::VERTEX),
+                    BufferInfo::buffer_format("Models uniform", &[models], wgpu::ShaderStages::VERTEX),
                     BufferInfo::buffer_format("Camera uniform", &[camera], wgpu::ShaderStages::VERTEX),
                     BufferInfo::buffer_format("Fragment uniform", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
                     BufferInfo::buffer_format("Light uniform", &[self.light], wgpu::ShaderStages::FRAGMENT),
@@ -253,23 +255,46 @@ impl<LA: Pod> ProtoUniforms<LA> {
         }
     }
 
-    fn model(&self) -> Model {
-        Model(Matrix4::identity())
-    }
+    pub fn example_models(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA, models: [Matrix4<f32>; ML]) -> ProtoUniforms<ML, LA> {
+        let eye = point3(3.0, 1.5, 3.0);
+        let look_direction = -eye.to_vec();
+        let up_direction = Vector3::unit_y();
+        let fovy = Rad(2.0 * PI / 5.0);
 
-    fn camera(&self) -> OglCamera {
-        self.camera.clone()
+        let side = look_direction.cross(up_direction);
+        Self::new(
+            models.map(Model::new),
+            OglCamera::new(eye, look_direction, up_direction, fovy),
+            FragmentUniforms::new(
+                eye.to_homogeneous().into(),
+                (side.normalize() - look_direction.normalize() * 2.0).extend(0.0).into()
+            ),
+            LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
+            1.0,
+            shader_source,
+            cull_mode,
+        )
     }
 }
 
-impl<LA: Pod> ContentFactory<4> for ProtoUniforms<LA> {
-    fn create(&self, [model_buffer, view_buffer, fragment_buffer, light_buffer]: [BufferWriter; 4]) -> Box<dyn Content> {
+impl<LA: Pod> ProtoUniforms<1, LA> {
+    pub fn example_aux(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA) -> Self {
+        Self::example_models(shader_source, cull_mode, light_aux, [Matrix4::identity()])
+    }
+}
+
+impl<const ML: usize, LA: Pod> ContentFactory<4> for ProtoUniforms<ML, LA> {
+    fn create(
+        self: Box<Self>,
+        [models_buffer, view_buffer, fragment_buffer, light_buffer]: [BufferWriter; 4]
+    ) -> Box<dyn Content> {
         Box::new(Uniforms {
-            animation_speed: self.animation_speed,
-            model: Uniform::new(self.model(), model_buffer),
-            camera: Uniform::new(self.camera(), view_buffer),
+            models: Uniform::new(self.models, models_buffer),
+            camera: Uniform::new(self.camera, view_buffer),
             fragment: Uniform::new(self.fragment, fragment_buffer),
             light: Uniform::new(self.light, light_buffer),
+
+            animation_speed: self.animation_speed,
         })
     }
 }
@@ -277,23 +302,27 @@ impl<LA: Pod> ContentFactory<4> for ProtoUniforms<LA> {
 // Uniforms
 
 #[allow(dead_code)]
-pub struct Uniforms<LA: Pod> {
-    animation_speed: f32,
-
-    model: Uniform<Model, ModelUniforms>,
+pub struct Uniforms<const ML: usize, LA: Pod> {
+    models: Uniform<[Model; ML], [ModelUniforms; ML]>,
     camera: Uniform<OglCamera, CameraUniform>,
     fragment: Uniform<FragmentUniforms, FragmentUniforms>,
     light: Uniform<LightUniforms<LA>, LightUniforms<LA>>,
+
+    animation_speed: f32,
 }
 
-impl<LA: Pod> Content for Uniforms<LA> {
+impl<const ML: usize, LA: Pod> Content for Uniforms<ML, LA> {
     fn resize(&mut self, width: u32, height: u32) {
         self.camera.as_mut().resize(width, height);
     }
 
     fn update(&mut self, dt: Duration) {
-        let angle = self.animation_speed * dt.as_secs_f32();
-        self.model.as_mut().0 = create_rotation([angle.sin(), angle.cos(), 0.0]);
+        let angle = Rad(self.animation_speed * dt.as_secs_f32());
+        let rotation = create_rotation([angle.sin(), angle.cos(), 0.0]);
+        for model in self.models.as_mut().iter_mut() {
+            model.rotation = rotation;
+        }
+
         self.light.as_mut().ambient_intensity = dt.as_secs_f32() / 5.0 % 1.0;
         self.camera.as_mut().eye.z = 3.0 + (dt.as_secs_f32() % 6.0 - 3.0).abs();
     }

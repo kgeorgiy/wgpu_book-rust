@@ -4,7 +4,7 @@ use core::{any::TypeId, marker::PhantomData, mem::size_of};
 use std::rc::Rc;
 
 use bytemuck::{cast_slice, Pod};
-use wgpu::{Buffer, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
+use wgpu::{BindingResource, Buffer, BufferAddress, BufferBinding, BufferSize, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
 use crate::webgpu::WebGPUDevice;
@@ -14,7 +14,9 @@ use crate::webgpu::WebGPUDevice;
 #[derive(Clone, Debug)]
 pub(crate) struct BufferLayout {
     type_id: TypeId,
-    len: usize,
+    item_count: usize,
+    item_size: usize,
+    item_alignment: usize,
 }
 
 
@@ -23,7 +25,7 @@ pub(crate) struct BufferLayout {
 pub(crate) struct SmartBuffer<F> {
     pub(crate) buffer: Buffer,
     pub(crate) format: F,
-    layout: BufferLayout,
+    pub(crate) layout: BufferLayout,
 }
 
 impl<F> SmartBuffer<F> {
@@ -33,6 +35,16 @@ impl<F> SmartBuffer<F> {
             layout: self.layout,
             queue,
         }
+    }
+
+    pub(crate) fn resources(&self) -> Vec<BindingResource> {
+        (0..self.layout.item_count)
+            .map(|index| BindingResource::Buffer(BufferBinding {
+                buffer: &self.buffer,
+                offset: (index * self.layout.item_alignment) as BufferAddress,
+                size: BufferSize::new(self.layout.item_size as u64),
+            }))
+            .collect()
     }
 }
 
@@ -57,7 +69,7 @@ impl BufferWriter {
     }
 
     fn write_slice<T: Pod + 'static>(&self, slice: &[T]) {
-        assert_eq!(self.layout.len, slice.len(), "Invalid slice length");
+        assert_eq!(self.layout.item_count, slice.len(), "Invalid slice length");
         self.queue.write_buffer(&self.buffer, 0, cast_slice(slice));
     }
 }
@@ -90,14 +102,16 @@ pub struct SmartBufferDescriptor<F> {
 }
 
 impl<'a, F> SmartBufferDescriptor<F> {
-    pub fn new<T: Pod>(label: String, items: &'a [T], usage: BufferUsages, format: F) -> Self {
+    pub fn new<T: Pod>(label: String, items: &'a [T], usage: BufferUsages, format: F, alignment: usize) -> Self {
         Self {
             label,
             contents: cast_slice(items).to_vec(),
             usage,
             layout: BufferLayout {
-                len: items.len(),
+                item_count: items.len(),
                 type_id: TypeId::of::<T>(),
+                item_size: size_of::<T>(),
+                item_alignment: alignment
             },
             format,
         }
@@ -118,13 +132,14 @@ impl<'a, F> SmartBufferDescriptor<F> {
 pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
     const USAGE: BufferUsages;
     const FORMAT: F;
+    const ALIGNMENT: usize = 1;
 
     fn buffer(label: &str, items: &[Self]) -> SmartBufferDescriptor<F> {
         Self::buffer_format(label, items, Self::FORMAT)
     }
 
     fn buffer_format(label: &str, items: &[Self], format: F) -> SmartBufferDescriptor<F> {
-        SmartBufferDescriptor::new(label.to_owned(), items, Self::USAGE, format)
+        SmartBufferDescriptor::new(label.to_owned(), items, Self::USAGE, format, Self::ALIGNMENT)
     }
 }
 
@@ -159,7 +174,7 @@ pub trait VertexBufferInfo where Self: Pod {
 impl<T: VertexBufferInfo> BufferInfo<VertexBufferLayout<'static>> for T {
     const USAGE: BufferUsages = BufferUsages::VERTEX;
     const FORMAT: VertexBufferLayout<'static> = VertexBufferLayout {
-        array_stride: size_of::<Self>() as wgpu::BufferAddress,
+        array_stride: size_of::<Self>() as BufferAddress,
         step_mode: VertexStepMode::Vertex,
         attributes: Self::ATTRIBUTES,
     };

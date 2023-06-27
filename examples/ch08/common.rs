@@ -18,7 +18,7 @@ pub struct LightAux {
 
 impl LightAux {
     #[allow(dead_code)]
-    pub fn example() -> ProtoUniforms<LightAux> {
+    pub fn example() -> ProtoUniforms<1, LightAux> {
         ProtoUniforms::example_aux(
             include_str!("shader.wgsl").to_owned(),
             None,

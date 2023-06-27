@@ -1,7 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{InnerSpace, Point2, Point3, vec4, Vector3, Vector4};
+use cgmath::{InnerSpace, Matrix4, Point2, Point3, vec4, Vector3, Vector4};
 
 use webgpu_book::VertexBufferInfo;
 
@@ -168,6 +168,13 @@ impl VertexNCT {
             normal: normal.into().normalize().extend(0.0).into(),
             color: color.into().to_homogeneous().into(),
             uv: uv.into().into(),
+        }
+    }
+
+    pub fn transform(&self, transform: Matrix4<f32>) -> Self {
+        VertexNCT {
+            position: (transform * <Vector4<f32>>::from(self.position)).into(),
+            ..*self
         }
     }
 }

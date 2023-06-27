@@ -4,7 +4,8 @@ use core::time::Duration;
 use anyhow::Result;
 
 use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer, usize_as_u32};
-use crate::bindings::{Textures, Uniforms};
+use crate::bindings::Textures;
+use crate::uniforms::Uniforms;
 
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
@@ -66,21 +67,17 @@ impl WebGPUDevice {
 
 pub(crate) struct WebGPUContent {
     device: WebGPUDevice,
-    render_pipeline: wgpu::RenderPipeline,
-    vertices: u32,
-    vertex_buffers: Vec<wgpu::Buffer>,
-    index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
-    bind_groups: Vec<wgpu::BindGroup>,
+    pipelines: Vec<Pipeline>,
 }
 
 impl WebGPUContent {
-    pub fn content<'a, const UL: usize>(window: &dyn RawWindow, conf: RenderConfiguration<UL>) -> Result<Box<dyn Content + 'a>> {
+    pub fn content<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content + 'a>> {
         pollster::block_on(Self::content_async(window, conf))
     }
 
-    pub async fn content_async<'a, const UL: usize>(
+    pub async fn content_async<'a>(
         window: &dyn RawWindow,
-        conf: RenderConfiguration<UL>,
+        conf: RenderConfiguration,
     ) -> Result<Box<dyn Content + 'a>> {
         let wg = WebGPUDevice::new(window).await;
 
@@ -108,15 +105,21 @@ impl WebGPUContent {
             },
         );
 
-        let content = Box::new(WebGPUContent {
-            device: wg,
-            render_pipeline,
+        let pipeline = Pipeline {
+            pipeline: render_pipeline,
+            vertices: usize_as_u32(conf.vertices),
             vertex_buffers: vertex_buffers.into_iter()
                 .map(|buffer| buffer.buffer)
                 .collect(),
             index_buffer,
-            vertices: usize_as_u32(conf.vertices),
             bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
+            instances: usize_as_u32(conf.instances)
+        };
+
+
+        let content = Box::new(WebGPUContent {
+            device: wg,
+            pipelines: vec![pipeline]
         });
 
         Ok(Box::new(CompositeContent::from([uniforms.content, content])))
@@ -228,20 +231,45 @@ impl Content for WebGPUContent {
                     stencil_ops: None,
                 }),
             });
-            render_pass.set_pipeline(&self.render_pipeline);
-            for (slot, buffer) in self.vertex_buffers.iter().enumerate() {
-                render_pass.set_vertex_buffer(usize_as_u32(slot), buffer.slice(..));
-            }
-            self.bind_groups.iter().enumerate()
-                .for_each(|(index, group)| render_pass.set_bind_group(usize_as_u32(index), group, &[]));
-            if let Some(buffer) = self.index_buffer.as_ref() {
-                render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
-                render_pass.draw_indexed(0..self.vertices, 0, 0..1);
-            } else {
-                render_pass.draw(0..self.vertices, 0..1);
+
+            for pipeline in &self.pipelines {
+                pipeline.render(&mut render_pass);
             }
         }
         self.device.queue.submit(Some(encoder.finish()));
         frame.present();
+    }
+}
+
+
+// Pipeline
+
+struct Pipeline {
+    pipeline: wgpu::RenderPipeline,
+    vertices: u32,
+    vertex_buffers: Vec<wgpu::Buffer>,
+    index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
+    bind_groups: Vec<wgpu::BindGroup>,
+    instances: u32
+}
+
+impl Pipeline {
+    fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+        render_pass.set_pipeline(&self.pipeline);
+
+        for (slot, buffer) in self.vertex_buffers.iter().enumerate() {
+            render_pass.set_vertex_buffer(usize_as_u32(slot), buffer.slice(..));
+        }
+
+        self.bind_groups.iter().enumerate()
+            .for_each(|(index, group)| render_pass.set_bind_group(usize_as_u32(index), group, &[]));
+
+        match self.index_buffer.as_ref() {
+            None => render_pass.draw(0..self.vertices, 0..self.instances),
+            Some(buffer) => {
+                render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
+                render_pass.draw_indexed(0..self.vertices, 0, 0..self.instances);
+            },
+        }
     }
 }

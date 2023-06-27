@@ -21,6 +21,6 @@ impl VertexBufferInfo for Vertex {
 
 
 pub fn run_example(title: &str, vertices: &[Vertex], indices: Option<&[u16]>) -> ! {
-    Config::with_vertices::<Vertex, u16, 0>(include_str!("triangle.wgsl"), vertices, indices)
+    Config::with_vertices(include_str!("triangle.wgsl"), vertices, indices)
         .run_title(title)
 }

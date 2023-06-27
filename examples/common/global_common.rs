@@ -20,8 +20,8 @@ mod vertex;
 pub(crate) struct Config;
 
 impl Config {
-    pub fn with_vertices<V, I, const UL: usize>(shader_source: &str, vertices: &[V], indices: Option<&[I]>)
-        -> RenderConfiguration<UL> where V: VertexBufferInfo, I: IndexBufferInfo
+    pub fn with_vertices<V, I>(shader_source: &str, vertices: &[V], indices: Option<&[I]>)
+        -> RenderConfiguration where V: VertexBufferInfo, I: IndexBufferInfo
     {
         RenderConfiguration {
             vertices: indices.map_or(vertices.len(), <[I]>::len),
@@ -31,7 +31,7 @@ impl Config {
         }
     }
 
-    pub(crate) fn with_shader<const UL: usize>(shader_source: &str) -> RenderConfiguration<UL> {
+    pub(crate) fn with_shader(shader_source: &str) -> RenderConfiguration {
         RenderConfiguration {
             shader_source: shader_source.to_owned(),
             ..RenderConfiguration::default()

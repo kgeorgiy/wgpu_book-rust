@@ -6,7 +6,7 @@ pub use self::global_common::*;
 mod global_common;
 
 
-pub fn proto_example(is_two_side: bool) -> ProtoUniforms<TwoSideLightAux> {
+pub fn proto_example(is_two_side: bool) -> ProtoUniforms<1, TwoSideLightAux> {
     ProtoUniforms::example_aux(
         include_str!("shader.wgsl").to_owned(),
         None,

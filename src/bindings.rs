@@ -1,15 +1,14 @@
 use anyhow::{Context, Result};
 use image::{io::Reader as ImageReader, RgbaImage};
 
-use crate::{Content, NoContent, UniformsConfiguration, usize_as_u32};
-use crate::buffer::SmartBuffer;
+use crate::usize_as_u32;
 use crate::webgpu::WebGPUDevice;
 
 // Binding
 
 #[derive(Clone, Debug)]
 pub(crate) struct Binding<'a> {
-    pub(crate) resource: wgpu::BindingResource<'a>,
+    pub(crate) resources: Vec<wgpu::BindingResource<'a>>,
     pub(crate) visibility: wgpu::ShaderStages,
     pub(crate) ty: wgpu::BindingType,
 }
@@ -44,60 +43,12 @@ impl BindGroup {
             entries: &bindings.into_iter().enumerate()
                 .map(|(index, binding)| wgpu::BindGroupEntry {
                     binding: usize_as_u32(index),
-                    resource: binding.resource
+                    resource: binding.resources.into_iter().next().expect("should have at least one"),
                 })
                 .collect::<Vec<_>>(),
         });
 
         Self { group, layout }
-    }
-}
-
-
-// Uniforms
-
-pub(crate) struct Uniforms {
-    pub(crate) content: Box<dyn Content>,
-    pub(crate) bindings: BindGroup,
-}
-
-impl Uniforms {
-    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, config: Option<UniformsConfiguration<UL>>) -> Self {
-        config.map_or_else(|| Self::none(wg), |conf| Self::some(wg, conf))
-    }
-
-    fn some<const UL: usize>(wg: &WebGPUDevice, conf: UniformsConfiguration<UL>) -> Self {
-        let UniformsConfiguration { buffers: descriptions, content_factory} = conf;
-        let buffers = descriptions.into_iter()
-            .map(|descriptor| descriptor.create_buffer(wg))
-            .collect::<Vec<_>>();
-
-        let bindings = buffers.iter().map(Self::binding).collect::<Vec<_>>();
-        let group = BindGroup::new(wg, "Uniform", bindings);
-        let writers = buffers.into_iter()
-            .map(|buffer| buffer.writer(wg.queue.clone()))
-            .collect::<Vec<_>>();
-
-        Self { bindings: group, content: content_factory._unsafe_create(writers) }
-    }
-
-    fn none(wg: &WebGPUDevice) -> Self {
-        Self {
-            content: Box::new(NoContent),
-            bindings: BindGroup::new(wg, "Uniform", vec![]),
-        }
-    }
-
-    fn binding(buffer: &SmartBuffer<wgpu::ShaderStages>) -> Binding {
-        Binding {
-            resource: buffer.buffer.as_entire_binding().clone(),
-            visibility: buffer.format,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-        }
     }
 }
 
@@ -176,7 +127,7 @@ impl Texture {
     fn bindings(&self) -> [Binding; 2] {
         [
             Binding {
-                resource: wgpu::BindingResource::TextureView(&self.view),
+                resources: vec![wgpu::BindingResource::TextureView(&self.view)],
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Texture {
                     multisampled: false,
@@ -185,7 +136,7 @@ impl Texture {
                 },
             },
             Binding {
-                resource: wgpu::BindingResource::Sampler(&self.sampler),
+                resources: vec![wgpu::BindingResource::Sampler(&self.sampler)],
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
             },
@@ -206,7 +157,6 @@ impl Textures {
         let textures: Vec<Texture> = texture_infos.iter()
             .map(|info| info.create_texture(wg))
             .collect::<Result<Vec<_>>>()?;
-
 
         let bindings = textures.iter().flat_map(Texture::bindings).collect::<Vec<_>>();
 

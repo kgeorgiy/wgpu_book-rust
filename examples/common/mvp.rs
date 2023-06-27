@@ -7,8 +7,9 @@ use core::{marker::PhantomData, time::Duration};
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Deg, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, RenderConfiguration, UniformsConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
+use webgpu_book::UniformsConfiguration;
 
 use super::{Config, To, Uniform};
 
@@ -106,11 +107,11 @@ impl<B: Pod + 'static, T: Clone + 'static> MvpFactory<T, B> where Mvp: To<B>, Mv
 impl<B: Pod + 'static, S: Clone + 'static> ContentFactory<1> for MvpFactory<S, B>
     where MvpContent<S, B>: Content, Mvp: To<B>
 {
-    fn create(&self, [mvp_buffer]: [BufferWriter; 1]) -> Box<dyn Content> {
+    fn create(self: Box<Self>, [mvp_buffer]: [BufferWriter; 1]) -> Box<dyn Content> {
         Box::new(MvpContent {
-            mvp: Uniform::new(self.mvp.clone(), mvp_buffer),
+            mvp: Uniform::new(self.mvp, mvp_buffer),
             fovy: self.fovy,
-            state: self.state.clone()
+            state: self.state,
         })
     }
 }
