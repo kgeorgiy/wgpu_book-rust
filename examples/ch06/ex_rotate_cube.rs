@@ -1,4 +1,5 @@
-use crate::common::{AnimationState, create_vertices, MvpMatrix, VertexC};
+use crate::common::{create_vertices, VertexC};
+use crate::common::mvp::{AnimationState, MvpMatrix};
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 
 mod common;

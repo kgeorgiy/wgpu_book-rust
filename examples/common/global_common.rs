@@ -6,7 +6,6 @@ use core::ops::{Deref, DerefMut};
 use bytemuck::Pod;
 
 use webgpu_book::{BufferInfo, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
-pub use mvp::*;
 pub use vertex::*;
 use webgpu_book::{BufferWriter, TypedBufferWriter};
 
@@ -15,8 +14,8 @@ pub mod vertex_data;
 pub mod functions;
 pub mod light;
 pub mod surface_data;
+pub mod mvp;
 mod vertex;
-mod mvp;
 
 pub(crate) struct Config;
 

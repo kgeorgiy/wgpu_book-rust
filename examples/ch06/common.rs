@@ -4,6 +4,7 @@ use core::iter::zip;
 use cgmath::{InnerSpace, Matrix4, Point3, Rad, Vector3};
 
 use webgpu_book::VertexBufferInfo;
+use crate::common::mvp::{MvpFactory, MvpMatrix};
 use crate::common::vertex_data::i8_as_f32;
 
 pub use self::global_common::*;

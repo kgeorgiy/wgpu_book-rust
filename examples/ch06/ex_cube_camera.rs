@@ -6,7 +6,8 @@ use winit::event::{DeviceEvent, ElementState};
 
 use webgpu_book::{Content, transforms::create_rotation};
 
-use crate::common::{Camera, CameraController, create_vertices, Mvp, MvpContent, MvpFactory, MvpMatrix, To, VertexC};
+use crate::common::{Camera, CameraController, create_vertices, To, VertexC};
+use crate::common::mvp::{Mvp, MvpContent, MvpFactory, MvpMatrix};
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 
 mod common;

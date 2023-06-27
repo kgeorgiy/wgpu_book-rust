@@ -1,5 +1,6 @@
 use cgmath::Deg;
 
+use crate::common::mvp::{AnimationState, MvpMatrix};
 use crate::common::vertex_data::cylinder_position;
 
 pub use self::global_common::*;

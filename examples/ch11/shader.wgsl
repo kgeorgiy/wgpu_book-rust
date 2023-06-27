@@ -1,16 +1,20 @@
-struct VertexUniforms {
-    model: mat4x4<f32>,
-    model_it: mat4x4<f32>,
+struct ModelUniforms {
+    points: mat4x4<f32>,
+    normals: mat4x4<f32>,
+}
+@group(0) @binding(0) var<uniform> model_u: ModelUniforms;
+
+struct CameraUniforms {
     view_project: mat4x4<f32>,
-};
-@group(0) @binding(0) var<uniform> vertex_u: VertexUniforms;
+}
+@group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
 
 struct Input {
     @location(0) pos: vec4<f32>,
     @location(1) normal: vec4<f32>,
     @location(2) color: vec4<f32>,
     @location(3) uv: vec2<f32>,
-};
+}
 
 struct Output {
     @builtin(position) position: vec4<f32>,
@@ -18,16 +22,16 @@ struct Output {
     @location(1) v_normal: vec4<f32>,
     @location(2) v_uv: vec2<f32>,
     @location(3) v_color: vec4<f32>,
-};
+}
 
 @vertex
 fn vs_main(in: Input) -> Output {
-    let position: vec4<f32> = vertex_u.model * in.pos;
+    let position: vec4<f32> = model_u.points * in.pos;
 
     var output: Output;
-    output.position = vertex_u.view_project * position;
+    output.position = camera_u.view_project * position;
     output.v_position = position;
-    output.v_normal = vertex_u.model_it * in.normal;
+    output.v_normal = model_u.normals * in.normal;
     output.v_uv = in.uv;
     output.v_color = in.color;
     return output;
@@ -36,8 +40,8 @@ fn vs_main(in: Input) -> Output {
 struct FragmentUniforms {
     light_position: vec4<f32>,
     eye_position: vec4<f32>,
-};
-@group(0) @binding(1) var<uniform> fragment_u: FragmentUniforms;
+}
+@group(0) @binding(2) var<uniform> fragment_u: FragmentUniforms;
 
 struct LightUniforms {
     specular_color: vec4<f32>,
@@ -46,8 +50,8 @@ struct LightUniforms {
     specular_intensity: f32,
     specular_shininess: f32,
     is_two_side: i32,
-};
-@group(0) @binding(2) var<uniform> light_u: LightUniforms;
+}
+@group(0) @binding(3) var<uniform> light_u: LightUniforms;
 
 fn diffuse(dotNL: f32) -> f32 {
     return light_u.diffuse_intensity * max(dotNL, 0.0);

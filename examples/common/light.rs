@@ -9,7 +9,8 @@ use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, S
 use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, RenderConfiguration, UniformsConfiguration, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
 
-use super::{CmdArgs, Config, Mvp, To, Uniform, VertexN};
+use super::{CmdArgs, Config, To, Uniform, VertexN};
+
 
 // Camera
 
@@ -57,6 +58,7 @@ impl FragmentUniforms {
     }
 }
 
+
 // Light
 
 #[repr(C, packed)]
@@ -92,27 +94,40 @@ impl<A: Pod> LightUniforms<A> {
 
 
 
-// MvpModelView
+// Model, ModelUniforms
+
+struct Model(Matrix4<f32>);
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct MvpModelView {
-    model: [[f32; 4]; 4],
-    model_it: [[f32; 4]; 4],
-    view_project: [[f32; 4]; 4],
+pub struct ModelUniforms {
+    points: [[f32; 4]; 4],
+    vectors: [[f32; 4]; 4],
 }
 
-impl To<MvpModelView> for Mvp {
-    fn to(&self) -> MvpModelView {
-        let model = self.model;
-        MvpModelView {
-            model: model.into(),
-            model_it: model.invert().expect("invertible matrix").transpose().into(),
-            view_project: (self.projection * self.view).into(),
+impl To<ModelUniforms> for Model {
+    fn to(&self) -> ModelUniforms {
+        ModelUniforms {
+            points: self.0.into(),
+            vectors: self.0.invert().expect("invertible matrix").transpose().into(),
         }
     }
 }
 
+
+// View, ViewUniforms
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+pub struct CameraUniform {
+    view_project: [[f32; 4]; 4],
+}
+
+impl To<CameraUniform> for OglCamera {
+    fn to(&self) -> CameraUniform {
+        CameraUniform { view_project: (self.projection() * self.view()).into() }
+    }
+}
 
 // ProtoUniforms
 
@@ -219,16 +234,18 @@ impl<LA: Pod> ProtoUniforms<LA> {
         shader_source: &str,
         topology: wgpu::PrimitiveTopology,
         vertices: &[V]
-    ) -> RenderConfiguration<3> {
-        let vertex: MvpModelView = self.mvp().to();
+    ) -> RenderConfiguration<4> {
+        let model: ModelUniforms = self.model().to();
+        let camera: CameraUniform = self.camera().to();
         RenderConfiguration {
             topology,
             cull_mode: self.cull_mode,
             uniforms: UniformsConfiguration::new(
                 [
-                    BufferInfo::buffer_format("Vertex uniforms", &[vertex], wgpu::ShaderStages::VERTEX),
-                    BufferInfo::buffer_format("Fragment uniforms", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
-                    BufferInfo::buffer_format("Light uniforms", &[self.light], wgpu::ShaderStages::FRAGMENT),
+                    BufferInfo::buffer_format("Model uniform", &[model], wgpu::ShaderStages::VERTEX),
+                    BufferInfo::buffer_format("Camera uniform", &[camera], wgpu::ShaderStages::VERTEX),
+                    BufferInfo::buffer_format("Fragment uniform", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
+                    BufferInfo::buffer_format("Light uniform", &[self.light], wgpu::ShaderStages::FRAGMENT),
                 ],
                 Box::new(self)
             ),
@@ -236,21 +253,21 @@ impl<LA: Pod> ProtoUniforms<LA> {
         }
     }
 
-    fn mvp(&self) -> Mvp {
-        Mvp {
-            model: Matrix4::identity(),
-            view: self.camera.view(),
-            projection: self.camera.projection(),
-        }
+    fn model(&self) -> Model {
+        Model(Matrix4::identity())
+    }
+
+    fn camera(&self) -> OglCamera {
+        self.camera.clone()
     }
 }
 
-impl<LA: Pod> ContentFactory<3> for ProtoUniforms<LA> {
-    fn create(&self, [mvp_buffer, fragment_buffer, light_buffer]: [BufferWriter; 3]) -> Box<dyn Content> {
+impl<LA: Pod> ContentFactory<4> for ProtoUniforms<LA> {
+    fn create(&self, [model_buffer, view_buffer, fragment_buffer, light_buffer]: [BufferWriter; 4]) -> Box<dyn Content> {
         Box::new(Uniforms {
-            camera: self.camera.clone(),
             animation_speed: self.animation_speed,
-            mvp: Uniform::new(self.mvp(), mvp_buffer),
+            model: Uniform::new(self.model(), model_buffer),
+            camera: Uniform::new(self.camera(), view_buffer),
             fragment: Uniform::new(self.fragment, fragment_buffer),
             light: Uniform::new(self.light, light_buffer),
         })
@@ -261,23 +278,24 @@ impl<LA: Pod> ContentFactory<3> for ProtoUniforms<LA> {
 
 #[allow(dead_code)]
 pub struct Uniforms<LA: Pod> {
-    camera: OglCamera,
     animation_speed: f32,
 
-    mvp: Uniform<Mvp, MvpModelView>,
+    model: Uniform<Model, ModelUniforms>,
+    camera: Uniform<OglCamera, CameraUniform>,
     fragment: Uniform<FragmentUniforms, FragmentUniforms>,
     light: Uniform<LightUniforms<LA>, LightUniforms<LA>>,
 }
 
 impl<LA: Pod> Content for Uniforms<LA> {
     fn resize(&mut self, width: u32, height: u32) {
-        self.mvp.as_mut().projection = self.camera.resize(width, height);
+        self.camera.as_mut().resize(width, height);
     }
 
     fn update(&mut self, dt: Duration) {
         let angle = self.animation_speed * dt.as_secs_f32();
-        self.mvp.as_mut().model = create_rotation([angle.sin(), angle.cos(), 0.0]);
+        self.model.as_mut().0 = create_rotation([angle.sin(), angle.cos(), 0.0]);
         self.light.as_mut().ambient_intensity = dt.as_secs_f32() / 5.0 % 1.0;
+        self.camera.as_mut().eye.z = 3.0 + (dt.as_secs_f32() % 6.0 - 3.0).abs();
     }
 }
 
