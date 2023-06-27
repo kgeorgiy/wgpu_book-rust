@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::f32::consts::PI;
+use core::f32::consts::PI;
 
 use cgmath::{Point3, point3};
 

@@ -1,7 +1,7 @@
-#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::module_name_repetitions, clippy::indexing_slicing)]
 
-use std::f32::consts::PI;
-use std::iter::zip;
+use core::f32::consts::PI;
+use core::iter::zip;
 
 use cgmath::{ElementWise, InnerSpace, Point3, point3};
 
@@ -94,31 +94,31 @@ pub fn parametric_surface_data<V: From<VertexNCT> + Copy>(
     let max = point3(max_x, max_y, max_z);
     let min_max = (&min, &max);
 
-    let scale = Point3::from(scale);
+    let scale_p = Point3::from(scale);
 
     for row in &mut points {
         for point in row.iter_mut() {
-            *point = normalize_point(point, min_max, &scale);
+            *point = normalize_point(point, min_max, &scale_p);
         }
     }
 
     let color = colormap.interpolator((
-        normalize_point(&point3(0.0, min_y, 0.0), min_max, &scale).y,
-        normalize_point(&point3(0.0, max_y, 0.0), min_max, &scale).y
+        normalize_point(&point3(0.0, min_y, 0.0), min_max, &scale_p).y,
+        normalize_point(&point3(0.0, max_y, 0.0), min_max, &scale_p).y
     ));
 
     let mut vertices: Vec<V> = Vec::with_capacity(4 * (nu - 1) * (nv - 1));
-    let (du, dv) = if global_uv {
+    let (td_u, td_v) = if global_uv {
         (1.0 / (nu as f32 - 1.0), 1.0 / (nv as f32 - 1.0))
     } else {
         (1.0, 1.0)
     };
     for i in 0..nu - 1 {
-        let u = du * i as f32;
-        let u_1 = du * (i + 1) as f32;
+        let u = td_u * i as f32;
+        let u_1 = td_u * (i + 1) as f32;
         for j in 0.. nv - 1 {
-            let v = dv * j as f32;
-            let v_1 = dv * (j + 1) as f32;
+            let v = td_v * j as f32;
+            let v_1 = td_v * (j + 1) as f32;
             let p0 = points[i][j];
             let p1 = points[i][j + 1];
             let p2 = points[i + 1][j + 1];

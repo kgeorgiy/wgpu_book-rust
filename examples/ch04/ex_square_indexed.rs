@@ -1,4 +1,4 @@
-use std::u16;
+use core::u16;
 
 use crate::common::{run_example, Vertex};
 

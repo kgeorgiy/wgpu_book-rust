@@ -1,4 +1,4 @@
-use std::iter::zip;
+use core::iter::zip;
 
 use crate::common::{run_example, VertexNT};
 use crate::common::vertex_data::{i8_as_f32, MULTI_TEXTURE_CUBE};

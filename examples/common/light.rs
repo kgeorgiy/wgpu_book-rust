@@ -1,7 +1,7 @@
 #![allow(clippy::extra_unused_type_parameters, clippy::module_name_repetitions)]
 
-use std::f32::consts::PI;
-use std::time::Duration;
+use core::f32::consts::PI;
+use core::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::{EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
@@ -186,7 +186,8 @@ impl<LA: Pod> ProtoUniforms<LA> {
     #[allow(dead_code)]
     pub fn run_wireframe(self, title: &str, vertices: &[VertexN], normal_len: f32) -> ! {
         let mut wireframe_vertices: Vec<VertexN> = Vec::with_capacity(vertices.len() * 4);
-        for face in vertices.chunks(3) {
+        for face in vertices.chunks_exact(3) {
+            #[allow(clippy::indexing_slicing)]
             wireframe_vertices.extend_from_slice(&[face[0], face[1], face[1], face[2], face[2], face[0]]);
         }
         if normal_len > 0.0 {

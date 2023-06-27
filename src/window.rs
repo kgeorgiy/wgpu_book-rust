@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use core::ops::DerefMut;
 
 use winit::{
     event::{Event, VirtualKeyCode::Escape, WindowEvent},
@@ -12,6 +12,8 @@ use crate::window_api::RawWindow;
 pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
     F: FnOnce(&dyn RawWindow) -> Box<dyn Content>,
 {
+    #![allow(clippy::print_stdout, clippy::use_debug)]
+
     let event_loop = EventLoop::new();
     let window = Window::new(&event_loop).expect("Create window");
     window.set_title(config.title);
@@ -34,14 +36,14 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
                     contents.deref_mut().resize(new_inner_size.width, new_inner_size.height),
                 WindowEvent::KeyboardInput { input, .. } => {
                     if input.virtual_keycode == Some(Escape) {
-                        *control_flow = ControlFlow::Exit
+                        *control_flow = ControlFlow::Exit;
                     } else {
                         println!("Key: {:?}", input.virtual_keycode);
                     }
                 }
                 _ => (),
             },
-            Event::DeviceEvent { event, .. } => contents.deref_mut().input(&event),
+            Event::DeviceEvent { event: input, .. } => contents.deref_mut().input(&input),
             Event::RedrawRequested(_) => contents.deref_mut().update(render_start_time.elapsed()),
             Event::MainEventsCleared => window.request_redraw(),
             _ => (),

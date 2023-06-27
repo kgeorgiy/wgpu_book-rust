@@ -1,5 +1,5 @@
-use std::f32::consts::PI;
-use std::iter::zip;
+use core::f32::consts::PI;
+use core::iter::zip;
 
 use cgmath::{InnerSpace, Matrix4, Point3, Rad, Vector3};
 
@@ -64,7 +64,7 @@ impl Camera {
 pub struct CameraController {
     rotate_x: f32,
     rotate_y: f32,
-    speed: f32,
+    speed: Rad<f32>,
 }
 
 #[allow(dead_code)]
@@ -73,25 +73,22 @@ impl CameraController {
         Self {
             rotate_x: 0.0,
             rotate_y: 0.0,
-            speed,
+            speed: Rad(speed),
         }
     }
 
     pub fn mouse_move(&mut self, mouse_x: f64, mouse_y: f64) {
+        #![allow(clippy::cast_possible_truncation)]
         self.rotate_x = mouse_x as f32;
         self.rotate_y = mouse_y as f32;
     }
 
     pub fn update_camera(&mut self, camera: &mut Camera) {
-        camera.yaw += Rad(self.rotate_x) * self.speed;
-        camera.pitch += Rad(self.rotate_y) * self.speed;
+        camera.yaw += self.speed * self.rotate_x;
+        camera.pitch += self.speed * self.rotate_y;
+        camera.pitch = Rad(camera.pitch.0.clamp(-PI / 3.0, PI / 3.0));
         self.rotate_x = 0.0;
         self.rotate_y = 0.0;
-        if camera.pitch < -Rad(PI / 3.0) {
-            camera.pitch = -Rad(PI / 3.0);
-        } else if camera.pitch > Rad(PI / 3.0) {
-            camera.pitch = Rad(PI / 3.0);
-        }
     }
 }
 

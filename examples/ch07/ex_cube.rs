@@ -22,8 +22,9 @@ fn create_mesh() -> Wireframe {
         // 4 lines on sides
         (0, 4), (1, 5), (2, 6), (3, 7),
     ];
-    Wireframe::from(lines.iter()
-        .map(|(f, t)| (Vertex::new(positions[*f]), Vertex::new(positions[*t])))
+    #[allow(clippy::indexing_slicing)]
+    Wireframe::from(lines.into_iter()
+        .map(|(f, t)| (Vertex::new(positions[f]), Vertex::new(positions[t])))
         .collect::<Vec<_>>())
 }
 

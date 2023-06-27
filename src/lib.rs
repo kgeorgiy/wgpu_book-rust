@@ -10,7 +10,7 @@ mod window_api;
 mod bindings;
 
 pub struct RenderConfiguration<const UL: usize> {
-    pub _placeholder: (), // Force using RenderConfiguration::default()
+    pub _placeholder: (), // Waiting for #[non_exhaustive(pub)]
     pub shader_source: String,
     pub vertices: usize,
     pub topology: wgpu::PrimitiveTopology,
@@ -85,4 +85,8 @@ pub fn run_wgpu<const UL: usize>(window_config: &WindowConfiguration, render_con
     window::show(window_config, move |window| {
         webgpu::WebGPUContent::content(window, render_config).expect("Valid configuration")
     })
+}
+
+fn usize_as_u32(size: usize) -> u32 {
+    u32::try_from(size).expect("Size/index should fit into u32")
 }

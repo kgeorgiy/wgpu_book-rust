@@ -26,12 +26,12 @@ impl Wireframe {
 
     pub(crate) fn add_line(&mut self, from: Vertex, to: Vertex) {
         self.vertices.push(from);
-        self.vertices.push(to)
+        self.vertices.push(to);
     }
 
     pub fn add_lines(&mut self, lines: &[(Vertex, Vertex)]) {
         for line in lines {
-            self.add_line(line.0, line.1)
+            self.add_line(line.0, line.1);
         }
     }
 
@@ -49,7 +49,7 @@ impl Wireframe {
 
 impl From<Vec<(Vertex, Vertex)>> for Wireframe {
     fn from(value: Vec<(Vertex, Vertex)>) -> Self {
-        Wireframe { vertices: value.iter().flat_map(|(f, s)| [*f, *s]).collect() }
+        Wireframe { vertices: value.into_iter().flat_map(|(f, s)| [f, s]).collect() }
     }
 }
 

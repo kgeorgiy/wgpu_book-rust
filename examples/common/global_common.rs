@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use ::std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
+use core::cell::RefCell;
+use core::ops::{Deref, DerefMut};
 
 use bytemuck::Pod;
 
-use ::webgpu_book::{BufferInfo, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, IndexBufferInfo, RenderConfiguration, VertexBufferInfo};
 pub use mvp::*;
 pub use vertex::*;
 use webgpu_book::{BufferWriter, TypedBufferWriter};
@@ -34,7 +34,7 @@ impl Config {
 
     pub(crate) fn with_shader<const UL: usize>(shader_source: &str) -> RenderConfiguration<UL> {
         RenderConfiguration {
-            shader_source: shader_source.to_string(),
+            shader_source: shader_source.to_owned(),
             ..RenderConfiguration::default()
         }
     }
@@ -46,11 +46,11 @@ thread_local!(static ARGS: RefCell<Vec<String>> = RefCell::new(std::env::args().
 
 impl CmdArgs {
     pub(crate) fn next(default: &str) -> String {
-        ARGS.with(|cell| cell.borrow_mut().pop().unwrap_or(default.to_string()))
+        ARGS.with(|cell| cell.borrow_mut().pop().unwrap_or(default.to_owned()))
     }
 
     pub(crate) fn next_known(known: &[&str]) -> String {
-        let value = Self::next(known[0]);
+        let value = Self::next(known.first().expect("at least one known variant"));
         assert!(known.iter().any(|k| value == *k), "Unknown argument '{value}', expected one of {known:?}");
         value
     }
@@ -58,7 +58,7 @@ impl CmdArgs {
     pub(crate) fn is(expected: &str) -> bool {
         ARGS.with(|cell| {
             let mut args = cell.borrow_mut();
-            let result = args.starts_with(&[expected.to_string()]);
+            let result = args.starts_with(&[expected.to_owned()]);
             if result {
                 args.pop();
             }

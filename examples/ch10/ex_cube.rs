@@ -1,22 +1,15 @@
-use cgmath::{Point2, Point3, Vector3};
+use core::iter::zip;
 
 use crate::common::{run_example, VertexNT};
-use crate::common::vertex_data::FACE_COLORS_CUBE;
+use crate::common::vertex_data::{FACE_COLORS_CUBE, i8_as_f32};
 
 mod common;
 
-fn vertex(position: [i8; 3], normal: [i8; 3], uv: [i8; 2]) -> VertexNT {
-    VertexNT::new(
-        Point3::from(position).cast::<f32>().unwrap(),
-        Vector3::from(normal).cast::<f32>().unwrap(),
-        Point2::from(uv).cast::<f32>().unwrap(),
-    )
-}
-
 fn create_vertices() -> Vec<VertexNT> {
+    #![allow(clippy::indexing_slicing)]
     let cube = FACE_COLORS_CUBE;
-    (0..cube.positions.len())
-        .map(|i| vertex(cube.positions[i], cube.normals[i], cube.uvs[i]))
+    zip(i8_as_f32(cube.positions), zip(i8_as_f32(cube.normals), i8_as_f32(cube.uvs)))
+        .map(|(position, (normal, uv))| VertexNT::new(position, normal, uv))
         .collect()
 }
 

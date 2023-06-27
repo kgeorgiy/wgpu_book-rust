@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use image::{io::Reader as ImageReader, RgbaImage};
 
-use crate::{Content, NoContent, UniformsConfiguration};
+use crate::{Content, NoContent, UniformsConfiguration, usize_as_u32};
 use crate::buffer::SmartBuffer;
 use crate::webgpu::WebGPUDevice;
 
@@ -26,7 +26,7 @@ impl BindGroup {
     pub(crate) fn new(wg: &WebGPUDevice, label: &str, bindings: Vec<Binding>) -> Self {
         let layouts = &bindings.iter().enumerate()
             .map(|(index, binding)| wgpu::BindGroupLayoutEntry {
-                binding: index as u32,
+                binding: usize_as_u32(index),
                 visibility: binding.visibility,
                 ty: binding.ty,
                 count: None,
@@ -34,16 +34,16 @@ impl BindGroup {
             .collect::<Vec<_>>();
 
         let layout = wg.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some(format!("{} Bing Group Layout", label).as_str()),
+            label: Some(format!("{label} Bing Group Layout").as_str()),
             entries: layouts,
         });
 
         let group = wg.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(format!("{} Bing Group", label).as_str(), ),
+            label: Some(format!("{label} Bing Group").as_str(), ),
             layout: &layout,
             entries: &bindings.into_iter().enumerate()
                 .map(|(index, binding)| wgpu::BindGroupEntry {
-                    binding: index as u32,
+                    binding: usize_as_u32(index),
                     resource: binding.resource
                 })
                 .collect::<Vec<_>>(),
@@ -62,25 +62,23 @@ pub(crate) struct Uniforms {
 }
 
 impl Uniforms {
-    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, conf: Option<UniformsConfiguration<UL>>) -> Self {
-        conf.map_or_else(|| Self::none(wg), |conf| Self::some(wg, conf))
+    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, config: Option<UniformsConfiguration<UL>>) -> Self {
+        config.map_or_else(|| Self::none(wg), |conf| Self::some(wg, conf))
     }
 
     fn some<const UL: usize>(wg: &WebGPUDevice, conf: UniformsConfiguration<UL>) -> Self {
-        let UniformsConfiguration { buffers, content_factory} = conf;
-        let buffers = buffers.into_iter()
+        let UniformsConfiguration { buffers: descriptions, content_factory} = conf;
+        let buffers = descriptions.into_iter()
             .map(|descriptor| descriptor.create_buffer(wg))
             .collect::<Vec<_>>();
 
-        let bindings = buffers.iter()
-            .map(Self::binding)
-            .collect::<Vec<_>>();
-        let bindings = BindGroup::new(wg, "Uniform", bindings);
+        let bindings = buffers.iter().map(Self::binding).collect::<Vec<_>>();
+        let group = BindGroup::new(wg, "Uniform", bindings);
         let writers = buffers.into_iter()
             .map(|buffer| buffer.writer(wg.queue.clone()))
             .collect::<Vec<_>>();
 
-        Self { bindings, content: content_factory._unsafe_create(writers) }
+        Self { bindings: group, content: content_factory._unsafe_create(writers) }
     }
 
     fn none(wg: &WebGPUDevice) -> Self {

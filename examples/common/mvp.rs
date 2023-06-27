@@ -2,8 +2,7 @@
 
 // Mvp
 
-use std::marker::PhantomData;
-use std::time::Duration;
+use core::{marker::PhantomData, time::Duration};
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Deg, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
@@ -30,16 +29,12 @@ pub struct MvpContent<T, B: Pod> where Mvp: To<B> {
 
 impl<B: Pod> Content for MvpContent<(), B> where Mvp: To<B> {
     fn resize(&mut self, width: u32, height: u32) {
-        MvpContent::resize(self, width, height);
+        self.mvp.as_mut().projection = create_projection(width as f32 / height as f32, self.fovy);
     }
 }
 
 #[allow(dead_code)]
 impl<B: Pod, T> MvpContent<T, B> where Mvp: To<B> {
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
-        self.mvp.as_mut().projection = create_projection(width as f32 / height as f32, self.fovy);
-    }
-
     pub fn set_model(&mut self, model: Matrix4<f32>) {
         self.mvp.as_mut().model = model;
     }

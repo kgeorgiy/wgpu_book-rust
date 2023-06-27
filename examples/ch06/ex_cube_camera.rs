@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use core::f32::consts::PI;
 
 use bytemuck::Pod;
 use cgmath::Deg;
@@ -20,11 +20,11 @@ struct CameraState {
 
 impl CameraState {
     fn input(&mut self, event: &DeviceEvent) {
-        match event {
+        match *event {
             DeviceEvent::Button {
                 button: 1, // Left Mouse Button
                 state,
-            } => self.mouse_pressed = *state == ElementState::Pressed,
+            } => self.mouse_pressed = state == ElementState::Pressed,
             DeviceEvent::MouseMotion { delta } => {
                 if self.mouse_pressed {
                     self.camera_controller.mouse_move(delta.0, delta.1);

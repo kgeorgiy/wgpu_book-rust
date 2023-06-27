@@ -1,4 +1,4 @@
-use std::iter::zip;
+use core::iter::zip;
 
 use crate::common::{LightAux, VertexN};
 use crate::common::vertex_data::{FACE_COLORS_CUBE, i8_as_f32};

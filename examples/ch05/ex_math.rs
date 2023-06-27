@@ -1,4 +1,6 @@
-use std::f64::consts::PI;
+#![allow(clippy::use_debug, clippy::print_stdout)]
+
+use core::f64::consts::PI;
 
 use cgmath::{Matrix4, Rad, Vector3, Vector4};
 

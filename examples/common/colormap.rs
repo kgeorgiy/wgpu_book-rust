@@ -39,6 +39,7 @@ impl Colormap {
     }
 
     fn interpolate(&self, value: f32, (min, max): (f32, f32)) -> Point3<f32> {
+        #![allow(clippy::indexing_slicing)]
         let tn = (value.clamp(min, max) - min) / (max - min);
         let len1 = self.colors.len() as f32 - 1.0;
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]

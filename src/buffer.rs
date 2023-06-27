@@ -1,4 +1,7 @@
-use std::{any::TypeId, marker::PhantomData, mem::size_of, rc::Rc};
+#![allow(clippy::module_name_repetitions)]
+
+use core::{any::TypeId, marker::PhantomData, mem::size_of};
+use std::rc::Rc;
 
 use bytemuck::{cast_slice, Pod};
 use wgpu::{Buffer, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
@@ -44,13 +47,17 @@ pub struct BufferWriter {
 }
 
 impl BufferWriter {
+    /// Converts this buffer to typed one
+    ///
+    /// # Panics
+    /// If type of buffer does not equal to requested type
     pub fn to_typed<T: 'static>(self) -> TypedBufferWriter<T> {
-        assert_eq!(self.layout.type_id, TypeId::of::<T>());
-        TypedBufferWriter { untyped: self, phantom: Default::default() }
+        assert_eq!(self.layout.type_id, TypeId::of::<T>(), "Invalid buffer type");
+        TypedBufferWriter { untyped: self, phantom: PhantomData::default() }
     }
 
     fn write_slice<T: Pod + 'static>(&self, slice: &[T]) {
-        assert_eq!(self.layout.len, slice.len());
+        assert_eq!(self.layout.len, slice.len(), "Invalid slice length");
         self.queue.write_buffer(&self.buffer, 0, cast_slice(slice));
     }
 }
@@ -117,7 +124,7 @@ pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
     }
 
     fn buffer_format(label: &str, items: &[Self], format: F) -> SmartBufferDescriptor<F> {
-        SmartBufferDescriptor::new(label.to_string(), items, Self::USAGE, format)
+        SmartBufferDescriptor::new(label.to_owned(), items, Self::USAGE, format)
     }
 }
 

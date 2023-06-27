@@ -1,10 +1,10 @@
 use std::rc::Rc;
-use std::time::Duration;
+use core::time::Duration;
 
 use anyhow::Result;
 
-use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer};
-use crate::bindings::{Uniforms, Textures};
+use crate::{CompositeContent, Content, RawWindow, RenderConfiguration, SmartBuffer, usize_as_u32};
+use crate::bindings::{Textures, Uniforms};
 
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
@@ -14,11 +14,10 @@ pub(crate) struct WebGPUDevice {
     texture_format: wgpu::TextureFormat,
 }
 
-impl WebGPUDevice {}
-
 impl WebGPUDevice {
     async fn new(window: &dyn RawWindow) -> Self {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        // SAFETY: Valid window handle provided
         let surface = unsafe { instance.create_surface(&window) }.expect("Create surface");
 
         let adapter = instance
@@ -30,15 +29,16 @@ impl WebGPUDevice {
             .await
             .expect("Failed to find an appropriate adapter");
 
-        let format = surface.get_capabilities(&adapter).formats[0];
+        let format = *surface.get_capabilities(&adapter)
+            .formats.get(0).expect("at least one compatible format");
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: 0,
             height: 0,
             present_mode: wgpu::PresentMode::Mailbox,
-            alpha_mode: Default::default(),
-            view_formats: vec![format],
+            alpha_mode: wgpu::CompositeAlphaMode::default(),
+            view_formats: vec![],
         };
 
         let (device, queue) = adapter
@@ -115,7 +115,7 @@ impl WebGPUContent {
                 .map(|buffer| buffer.buffer)
                 .collect(),
             index_buffer,
-            vertices: conf.vertices as u32,
+            vertices: usize_as_u32(conf.vertices),
             bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
         });
 
@@ -230,10 +230,10 @@ impl Content for WebGPUContent {
             });
             render_pass.set_pipeline(&self.render_pipeline);
             for (slot, buffer) in self.vertex_buffers.iter().enumerate() {
-                render_pass.set_vertex_buffer(slot as u32, buffer.slice(..));
+                render_pass.set_vertex_buffer(usize_as_u32(slot), buffer.slice(..));
             }
             self.bind_groups.iter().enumerate()
-                .for_each(|(index, group)| render_pass.set_bind_group(index as u32, group, &[]));
+                .for_each(|(index, group)| render_pass.set_bind_group(usize_as_u32(index), group, &[]));
             if let Some(buffer) = self.index_buffer.as_ref() {
                 render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
                 render_pass.draw_indexed(0..self.vertices, 0, 0..1);

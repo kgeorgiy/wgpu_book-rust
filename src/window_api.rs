@@ -1,14 +1,16 @@
-// Content
-
-use std::time::Duration;
+use core::time::Duration;
 
 use winit::event::DeviceEvent;
+
+
+// Content
 
 pub trait Content {
     fn resize(&mut self, _width: u32, _height: u32) {}
     fn update(&mut self, _dt: Duration) {}
     fn input(&mut self, _event: &DeviceEvent) {}
 }
+
 
 // NoContent
 
@@ -45,7 +47,7 @@ impl Content for CompositeContent {
 
     fn input(&mut self, event: &DeviceEvent) {
         for part in &mut self.parts {
-            part.input(&event);
+            part.input(event);
         }
     }
 }
