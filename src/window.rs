@@ -41,7 +41,7 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
                 }
                 _ => (),
             },
-            Event::DeviceEvent { event, .. } => contents.deref_mut().input(event),
+            Event::DeviceEvent { event, .. } => contents.deref_mut().input(&event),
             Event::RedrawRequested(_) => contents.deref_mut().update(render_start_time.elapsed()),
             Event::MainEventsCleared => window.request_redraw(),
             _ => (),

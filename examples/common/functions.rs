@@ -20,24 +20,25 @@ pub fn klein_bottle(u: f32, v: f32) -> Point3<f32> {
     let (sin_v, cos_v) = v.sin_cos();
     let cos_sin = cos_v * sin_u;
 
-    let x = 2.0 / 15.0 * (3.0 + 5.0 * cos_u * sin_u) * sin_v;
-    let y = -1.0 / 15.0 * sin_u * (
-        3.0 * cos_v - 3.0 * cos_u.powf(2.0) * cos_v
-            - 48.0 * cos_u.powf(4.0) * cos_v
-            + 48.0 * cos_u.powf(6.0) * cos_v
-            - 60.0 * sin_u
-            + 5.0 * cos_u * cos_sin
-            - 5.0 * cos_u.powf(3.0) * cos_sin
-            - 80.0 * cos_u.powf(5.0) * cos_sin
-            + 80.0 * cos_u.powf(7.0) * cos_sin
-    );
-    let z = -2.0 / 15.0 * cos_u * (
-        3.0 * cos_v - 30.0 * sin_u
-            + 90.0 * cos_u.powf(4.0) * sin_u
-            - 60.0 * cos_u.powf(6.0) * sin_u
-            + 5.0 * cos_u * cos_v * sin_u
-    );
-    point3(x, -z, -y)
+    point3(
+        2.0 / 15.0 * (3.0 + 5.0 * cos_u * sin_u) * sin_v,
+        2.0 / 15.0 * cos_u * (
+            3.0 * cos_v - 30.0 * sin_u
+                + 90.0 * cos_u.powf(4.0) * sin_u
+                - 60.0 * cos_u.powf(6.0) * sin_u
+                + 5.0 * cos_u * cos_v * sin_u
+        ),
+        1.0 / 15.0 * sin_u * (
+            3.0 * cos_v - 3.0 * cos_u.powf(2.0) * cos_v
+                - 48.0 * cos_u.powf(4.0) * cos_v
+                + 48.0 * cos_u.powf(6.0) * cos_v
+                - 60.0 * sin_u
+                + 5.0 * cos_u * cos_sin
+                - 5.0 * cos_u.powf(3.0) * cos_sin
+                - 80.0 * cos_u.powf(5.0) * cos_sin
+                + 80.0 * cos_u.powf(7.0) * cos_sin
+        ),
+    )
 }
 
 pub fn wellenkugel(u: f32, v: f32) -> Point3<f32> {
@@ -57,11 +58,12 @@ pub fn breather(u: f32, v: f32) -> Point3<f32> {
     let (av_sin, av_cos) = (aa1s * v).sin_cos();
 
     let de = A * (aa1 * au_cosh.powf(2.0) + (A * av_sin).powf(2.0));
-    let x = -u * de / 2.0 + aa1 * au_cosh * au_sinh;
-    let y = aa1s * au_cosh * (-aa1s * v.cos() * av_cos - v.sin() * av_sin);
-    let z = aa1s * au_cosh * (-aa1s * v.sin() * av_cos + v.cos() * av_sin);
 
-    point3(x, y, z) * 2.0 / de
+    point3(
+        -u * de / 2.0 + aa1 * au_cosh * au_sinh,
+        aa1s * au_cosh * (-aa1s * v.cos() * av_cos - v.sin() * av_sin),
+        aa1s * au_cosh * (-aa1s * v.sin() * av_cos + v.cos() * av_sin)
+    ) * 2.0 / de
 }
 
 pub fn seashell(u: f32, v: f32) -> Point3<f32> {
@@ -70,10 +72,11 @@ pub fn seashell(u: f32, v: f32) -> Point3<f32> {
     let u_exp = u.exp();
 
     let (sin_u, cos_u) = (u * 6.0 * PI).sin_cos();
-    let x = 2.0 * (u_exp - 1.0) * sin_u * v2_cos2;
-    let y = 1.0 - (u * 2.0).exp() - v_sin + u_exp * v_sin;
-    let z = 2.0 * (1.0 - u_exp) * cos_u * v2_cos2;
-    point3(x, y, z)
+    point3(
+        2.0 * (u_exp - 1.0) * sin_u * v2_cos2,
+        1.0 - (u * 2.0).exp() - v_sin + u_exp * v_sin,
+        2.0 * (1.0 - u_exp) * cos_u * v2_cos2,
+    )
 }
 
 
@@ -84,11 +87,11 @@ pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
     let (sin_v, cos_v) = v.sin_cos();
     let (sin_u, cos_u) = u.sin_cos();
 
-    let auv = 2.0 / (1.0 + A - A * (sin_v * cos_u).powf(2.0));
-    let ruv = auv * sin_v * ((1.0 + 1.0 / A) * (1.0 + A * sin_u * sin_u)).sqrt();
-    let x = ((v / 2.0).tan().ln() + (1.0 + A) * auv * cos_v) / A.sqrt();
+    let a_uv = 2.0 / (1.0 + A - A * (sin_v * cos_u).powf(2.0));
+    let r_uv = a_uv * sin_v * ((1.0 + 1.0 / A) * (1.0 + A * sin_u * sin_u)).sqrt();
+    let x = ((v / 2.0).tan().ln() + (1.0 + A) * a_uv * cos_v) / A.sqrt();
 
-    point3(x, ruv * pu.cos(), ruv * pu.sin())
+    point3(x, r_uv * pu.cos(), r_uv * pu.sin())
 }
 
 pub fn sphere(u:f32, v:f32) -> Point3<f32> {

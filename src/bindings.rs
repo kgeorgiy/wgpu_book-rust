@@ -42,7 +42,10 @@ impl BindGroup {
             label: Some(format!("{} Bing Group", label).as_str(), ),
             layout: &layout,
             entries: &bindings.into_iter().enumerate()
-                .map(|(index, binding)| wgpu::BindGroupEntry { binding: index as u32, resource: binding.resource })
+                .map(|(index, binding)| wgpu::BindGroupEntry {
+                    binding: index as u32,
+                    resource: binding.resource
+                })
                 .collect::<Vec<_>>(),
         });
 
@@ -207,9 +210,7 @@ impl Textures {
             .collect::<Result<Vec<_>>>()?;
 
 
-        let bindings = textures.iter()
-            .flat_map(|texture| texture.bindings())
-            .collect::<Vec<_>>();
+        let bindings = textures.iter().flat_map(Texture::bindings).collect::<Vec<_>>();
 
         Ok(Self {
             bindings: BindGroup::new(wg, "Textures", bindings),

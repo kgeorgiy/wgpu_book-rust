@@ -7,7 +7,7 @@ use winit::event::DeviceEvent;
 pub trait Content {
     fn resize(&mut self, _width: u32, _height: u32) {}
     fn update(&mut self, _dt: Duration) {}
-    fn input(&mut self, _event: DeviceEvent) {}
+    fn input(&mut self, _event: &DeviceEvent) {}
 }
 
 // NoContent
@@ -43,9 +43,9 @@ impl Content for CompositeContent {
         }
     }
 
-    fn input(&mut self, event: DeviceEvent) {
+    fn input(&mut self, event: &DeviceEvent) {
         for part in &mut self.parts {
-            part.input(event.clone());
+            part.input(&event);
         }
     }
 }

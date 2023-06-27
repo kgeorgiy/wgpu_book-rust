@@ -1,4 +1,4 @@
-#![allow(clippy::extra_unused_type_parameters)]
+#![allow(clippy::extra_unused_type_parameters, clippy::module_name_repetitions)]
 
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -187,7 +187,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
     pub fn run_wireframe(self, title: &str, vertices: &[VertexN], normal_len: f32) -> ! {
         let mut wireframe_vertices: Vec<VertexN> = Vec::with_capacity(vertices.len() * 4);
         for face in vertices.chunks(3) {
-            wireframe_vertices.extend_from_slice(&[face[0], face[1], face[1], face[2], face[2], face[0]])
+            wireframe_vertices.extend_from_slice(&[face[0], face[1], face[1], face[2], face[2], face[0]]);
         }
         if normal_len > 0.0 {
             for vertex in vertices {

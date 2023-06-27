@@ -1,3 +1,5 @@
+#![allow(clippy::module_name_repetitions)]
+
 // Mvp
 
 use std::marker::PhantomData;
@@ -60,7 +62,7 @@ pub struct MvpFactory<T, B> {
 impl<B, T: Clone + 'static> MvpFactory<T, B> {
     pub fn new(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T) -> Self {
         let mvp = Mvp { model, view, projection: create_projection(1.0, fovy) };
-        Self { mvp, fovy, state, phantom: Default::default() }
+        Self { mvp, fovy, state, phantom: PhantomData::default() }
     }
 
     pub fn from_ogl<P: Into<Point3<f32>>, F: Into<Rad<f32>>>(

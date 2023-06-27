@@ -93,7 +93,7 @@ impl<B: 'static, T> Uniform<T, B> where B: Pod, T: To<B> {
 
 impl<B: Pod, T> Uniform<T, B> where T: To<B> {
     fn write(&self) {
-        self.buffer.write(self.state.to())
+        self.buffer.write(self.state.to());
     }
 }
 

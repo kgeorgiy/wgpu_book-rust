@@ -34,7 +34,7 @@ impl<const UL: usize> Default for RenderConfiguration<UL> {
     fn default() -> Self {
         RenderConfiguration {
             _placeholder: (),
-            shader_source: "".to_string(),
+            shader_source: String::new(),
             vertices: 0,
             topology: wgpu::PrimitiveTopology::TriangleList,
             cull_mode: Some(wgpu::Face::Back),
@@ -56,7 +56,7 @@ pub struct UniformsConfiguration<const UL: usize> {
 }
 
 impl<const UL: usize> UniformsConfiguration<UL> {
-    pub fn new(
+    #[must_use] pub fn new(
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
         content_factory: Box<dyn ContentFactory<UL>>
     ) -> Option<Self> {
