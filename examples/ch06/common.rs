@@ -4,11 +4,12 @@ use std::iter::zip;
 use cgmath::{InnerSpace, Matrix4, Point3, Rad, Vector3};
 
 use webgpu_book::VertexBufferInfo;
+use crate::common::vertex_data::i8_as_f32;
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 #[allow(dead_code)]
 pub fn run_example<V: VertexBufferInfo>(
@@ -98,10 +99,7 @@ impl CameraController {
 
 #[allow(dead_code)]
 pub fn create_vertices<const L: usize>(positions: [[i8; 3]; L], colors: [[i8; 3]; L]) -> Vec<VertexC> {
-    zip(positions, colors)
-        .map(|(pos, col)| VertexC::new(
-            [pos[0] as f32, pos[1] as f32, pos[2] as f32],
-            [col[0] as f32, col[1] as f32, col[2] as f32],
-        ))
+    zip(i8_as_f32(positions), i8_as_f32(colors))
+        .map(|(pos, col)| VertexC::new(pos, col))
         .collect()
 }

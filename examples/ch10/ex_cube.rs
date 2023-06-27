@@ -15,11 +15,9 @@ fn vertex(position: [i8; 3], normal: [i8; 3], uv: [i8; 2]) -> VertexNT {
 
 fn create_vertices() -> Vec<VertexNT> {
     let cube = FACE_COLORS_CUBE;
-    let mut data: Vec<VertexNT> = Vec::with_capacity(cube.positions.len());
-    for i in 0..cube.positions.len() {
-        data.push(vertex(cube.positions[i], cube.normals[i], cube.uvs[i]));
-    }
-    data.to_vec()
+    (0..cube.positions.len())
+        .map(|i| vertex(cube.positions[i], cube.normals[i], cube.uvs[i]))
+        .collect()
 }
 
 fn main() {

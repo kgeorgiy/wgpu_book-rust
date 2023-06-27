@@ -23,12 +23,12 @@ pub(crate) struct BindGroup {
 }
 
 impl BindGroup {
-    pub(crate) fn new<'a>(wg: &WebGPUDevice, label: &str, bindings: Vec<Binding<'a>>) -> Self {
+    pub(crate) fn new(wg: &WebGPUDevice, label: &str, bindings: Vec<Binding>) -> Self {
         let layouts = &bindings.iter().enumerate()
             .map(|(index, binding)| wgpu::BindGroupLayoutEntry {
                 binding: index as u32,
-                visibility: binding.visibility.clone(),
-                ty: binding.ty.clone(),
+                visibility: binding.visibility,
+                ty: binding.ty,
                 count: None,
             })
             .collect::<Vec<_>>();
@@ -59,18 +59,18 @@ pub(crate) struct Uniforms {
 }
 
 impl Uniforms {
-    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, conf: Option<Box<UniformsConfiguration<UL>>>) -> Self {
+    pub(crate) fn new<const UL: usize>(wg: &WebGPUDevice, conf: Option<UniformsConfiguration<UL>>) -> Self {
         conf.map_or_else(|| Self::none(wg), |conf| Self::some(wg, conf))
     }
 
-    fn some<const UL: usize>(wg: &WebGPUDevice, conf: Box<UniformsConfiguration<UL>>) -> Self {
-        let UniformsConfiguration { buffers, content_factory} = *conf;
+    fn some<const UL: usize>(wg: &WebGPUDevice, conf: UniformsConfiguration<UL>) -> Self {
+        let UniformsConfiguration { buffers, content_factory} = conf;
         let buffers = buffers.into_iter()
             .map(|descriptor| descriptor.create_buffer(wg))
             .collect::<Vec<_>>();
 
         let bindings = buffers.iter()
-            .map(|buffer| Self::binding(buffer))
+            .map(Self::binding)
             .collect::<Vec<_>>();
         let bindings = BindGroup::new(wg, "Uniform", bindings);
         let writers = buffers.into_iter()
@@ -90,7 +90,7 @@ impl Uniforms {
     fn binding(buffer: &SmartBuffer<wgpu::ShaderStages>) -> Binding {
         Binding {
             resource: buffer.buffer.as_entire_binding().clone(),
-            visibility: buffer.format.clone(),
+            visibility: buffer.format,
             ty: wgpu::BindingType::Buffer {
                 ty: wgpu::BufferBindingType::Uniform,
                 has_dynamic_offset: false,

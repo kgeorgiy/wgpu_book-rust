@@ -2,10 +2,10 @@ use wgpu::{IndexFormat, PrimitiveTopology};
 
 use webgpu_book::RenderConfiguration;
 
-use crate::common::{CmdArgs, Config};
+use crate::global_common::{CmdArgs, Config};
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 fn main() {
     let primitive_type = CmdArgs::next("triangle-strip");
@@ -16,10 +16,10 @@ fn main() {
         "line-strip" => (PrimitiveTopology::LineStrip, Some(IndexFormat::Uint32)),
         "triangle-list" => (PrimitiveTopology::TriangleList, None),
         "triangle-strip" => (PrimitiveTopology::TriangleStrip, Some(IndexFormat::Uint32)),
-        _ => panic!("Unknown type {}", primitive_type),
+        _ => panic!("Unknown type {primitive_type}"),
     };
 
-    let title = format!("Ch4. Topology: {}", primitive_type);
+    let title = format!("Ch4. Topology: {primitive_type}");
     RenderConfiguration::<0> {
         vertices: 6,
         topology,

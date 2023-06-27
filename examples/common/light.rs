@@ -1,3 +1,5 @@
+#![allow(clippy::extra_unused_type_parameters)]
+
 use std::f32::consts::PI;
 use std::time::Duration;
 
@@ -54,7 +56,6 @@ impl FragmentUniforms {
         Self { eye_position: eye, light_position: light }
     }
 }
-
 
 // Light
 
@@ -165,7 +166,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
 
     pub fn run<V: VertexBufferInfo + Into<VertexN>>(self, title: &str, vertices: &[V]) -> ! {
         if CmdArgs::is("wireframe") {
-            let vertices_n = vertices.into_iter().map(|v| (*v).into()).collect::<Vec<_>>();
+            let vertices_n = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
             self.run_wireframe(title, &vertices_n, 0.1)
         } else {
             self.run_vertices(title, vertices)
@@ -195,7 +196,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         }
 
         self.run_wgpu(
-            &title,
+            title,
             include_str!("wireframe.wgsl"),
             wgpu::PrimitiveTopology::LineList,
             &wireframe_vertices
@@ -209,7 +210,7 @@ impl<LA: Pod> ProtoUniforms<LA> {
         topology: wgpu::PrimitiveTopology,
         vertices: &[V]
     ) -> ! {
-        self.config(shader_source, topology, &vertices).run_title(title);
+        self.config(shader_source, topology, vertices).run_title(title);
     }
 
     pub fn config<V: VertexBufferInfo>(
@@ -292,7 +293,7 @@ pub struct TwoSideLightAux {
 impl TwoSideLightAux {
     pub fn new(is_two_side: bool) -> Self {
         Self {
-            is_two_side: if is_two_side { 1 } else { 0 },
+            is_two_side: i32::from(is_two_side),
             padding: [0; 12]
         }
     }

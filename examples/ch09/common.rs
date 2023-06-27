@@ -1,9 +1,9 @@
 use crate::common::light::{ProtoUniforms, TwoSideLightAux};
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 
 pub fn proto_example(is_two_side: bool) -> ProtoUniforms<TwoSideLightAux> {

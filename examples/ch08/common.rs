@@ -3,10 +3,10 @@ use cgmath::point3;
 
 use crate::common::light::ProtoUniforms;
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 // LightAux
 

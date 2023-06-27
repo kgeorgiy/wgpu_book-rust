@@ -2,10 +2,10 @@ use webgpu_book::{RenderConfiguration, TextureInfo};
 
 use crate::common::light::{ProtoUniforms, TwoSideLightAux};
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 #[allow(dead_code)]
 pub fn proto_example(is_two_side: bool) -> ProtoUniforms<TwoSideLightAux> {
@@ -23,7 +23,7 @@ pub fn run_example(title: &str, vertices: &[VertexNCT]) -> ! {
     let proto = proto_example(is_two_side);
     let configuration = RenderConfiguration {
         textures: vec![TextureInfo {
-            file: format!("examples/ch11/assets/{}.png", texture_file).to_string(),
+            file: format!("examples/ch11/assets/{texture_file}.png"),
             u_mode: wgpu::AddressMode::Repeat,
             v_mode: wgpu::AddressMode::Repeat,
         }],

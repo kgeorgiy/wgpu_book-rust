@@ -2,10 +2,10 @@ use cgmath::Deg;
 
 use crate::common::vertex_data::cylinder_position;
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 
 // Wireframe
@@ -20,7 +20,7 @@ impl Wireframe {
         Self {  vertices: Vec::with_capacity(capacity * 2) }
     }
 
-    pub(crate) fn to_vec(self) -> Vec<Vertex> {
+    pub(crate) fn into_vec(self) -> Vec<Vertex> {
         self.vertices
     }
 
@@ -40,7 +40,7 @@ impl Wireframe {
             title,
             include_str!("../ch06/line3d.wgsl"),
             1.0,
-            &self.to_vec(),
+            &self.into_vec(),
             wgpu::PrimitiveTopology::LineList,
             None,
         );

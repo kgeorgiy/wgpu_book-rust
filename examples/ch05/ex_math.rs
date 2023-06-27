@@ -21,16 +21,16 @@ fn main() {
 }
 
 fn show(operation: &str, first: Matrix4<f64>, second: Matrix4<f64>) {
-    println!("\n{}", operation);
+    println!("\n{operation}");
 
     let my_vec = Vector4::new(1.0, 2.0, 3.0, 1.0);
-    println!("    Original vector: {:?}", my_vec);
+    println!("    Original vector: {my_vec:?}");
 
-    println!("    {} matrix: {:?}", operation, first);
+    println!("    {operation} matrix: {first:?}");
     println!("    vector after {}: {:?}", operation, first * my_vec);
 
     let double = second * first;
-    println!("    Double {} matrix: {:?}", operation, double);
+    println!("    Double {operation} matrix: {double:?}");
     println!(
         "    Vector after double {}: {:?}",
         operation,

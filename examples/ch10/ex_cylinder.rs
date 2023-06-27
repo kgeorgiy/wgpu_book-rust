@@ -5,7 +5,7 @@ use crate::common::vertex_data::cylinder_position;
 
 mod common;
 
-pub fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize, ul: f32, vl: f32) -> Vec<VertexNT> {
+fn cylinder_vertices(rin: f32, rout: f32, height: f32, n: usize, ul: f32, vl: f32) -> Vec<VertexNT> {
     let h = height / 2.0;
     let d_theta = Deg(360.0 / n as f32);
 

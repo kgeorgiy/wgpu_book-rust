@@ -18,14 +18,14 @@ pub struct RenderConfiguration<const UL: usize> {
     pub strip_index_format: Option<wgpu::IndexFormat>,
     pub vertex_buffers: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
     pub index_buffer: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
-    pub uniforms: Option<Box<UniformsConfiguration<UL>>>,
+    pub uniforms: Option<UniformsConfiguration<UL>>,
     pub textures: Vec<TextureInfo>,
 }
 
 impl<const UL: usize> RenderConfiguration<UL> {
     pub fn run_title(self, title: &str) -> ! {
         window::show(&WindowConfiguration { title }, move |window| {
-            webgpu::WebGPUContent::new(window, self).expect("Valid configuration")
+            webgpu::WebGPUContent::content(window, self).expect("Valid configuration")
         });
     }
 }
@@ -59,11 +59,8 @@ impl<const UL: usize> UniformsConfiguration<UL> {
     pub fn new(
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
         content_factory: Box<dyn ContentFactory<UL>>
-    ) -> Option<Box<Self>> {
-        Some(Box::new(Self {
-            content_factory,
-            buffers: buffers.into_iter().collect()
-        }))
+    ) -> Option<Self> {
+        Some(Self { content_factory, buffers: buffers.into_iter().collect() })
     }
 }
 
@@ -84,8 +81,8 @@ impl ContentFactory<0> for NoContentFactory {
 }
 
 
-pub fn run_wgpu<'a, const UL: usize>(window_config: &WindowConfiguration, render_config: RenderConfiguration<UL>) -> ! {
+pub fn run_wgpu<const UL: usize>(window_config: &WindowConfiguration, render_config: RenderConfiguration<UL>) -> ! {
     window::show(window_config, move |window| {
-        webgpu::WebGPUContent::new(window, render_config).expect("Valid configuration")
+        webgpu::WebGPUContent::content(window, render_config).expect("Valid configuration")
     })
 }

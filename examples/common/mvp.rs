@@ -33,7 +33,7 @@ impl<B: Pod> Content for MvpContent<(), B> where Mvp: To<B> {
 }
 
 #[allow(dead_code)]
-impl<'a, B: Pod, T> MvpContent<T, B> where Mvp: To<B> {
+impl<B: Pod, T> MvpContent<T, B> where Mvp: To<B> {
     pub(crate) fn resize(&mut self, width: u32, height: u32) {
         self.mvp.as_mut().projection = create_projection(width as f32 / height as f32, self.fovy);
     }
@@ -136,7 +136,7 @@ impl AnimationState {
         indices: Option<&[I]>,
     ) -> ! where Mvp: To<B> {
         MvpFactory::example(AnimationState { animation_speed })
-            .run(&title, shader_source, vertices, topology, indices);
+            .run(title, shader_source, vertices, topology, indices);
     }
 }
 

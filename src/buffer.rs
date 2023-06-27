@@ -28,7 +28,7 @@ impl<F> SmartBuffer<F> {
         BufferWriter {
             buffer: self.buffer,
             layout: self.layout,
-            queue: queue.clone(),
+            queue,
         }
     }
 }
@@ -113,7 +113,7 @@ pub trait BufferInfo<F: Clone + 'static> where Self: Pod {
     const FORMAT: F;
 
     fn buffer(label: &str, items: &[Self]) -> SmartBufferDescriptor<F> {
-        Self::buffer_format(label, items, Self::FORMAT.clone())
+        Self::buffer_format(label, items, Self::FORMAT)
     }
 
     fn buffer_format(label: &str, items: &[Self], format: F) -> SmartBufferDescriptor<F> {
@@ -154,6 +154,6 @@ impl<T: VertexBufferInfo> BufferInfo<VertexBufferLayout<'static>> for T {
     const FORMAT: VertexBufferLayout<'static> = VertexBufferLayout {
         array_stride: size_of::<Self>() as wgpu::BufferAddress,
         step_mode: VertexStepMode::Vertex,
-        attributes: &Self::ATTRIBUTES,
+        attributes: Self::ATTRIBUTES,
     };
 }

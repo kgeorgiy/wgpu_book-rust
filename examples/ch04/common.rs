@@ -1,9 +1,9 @@
 use webgpu_book::VertexBufferInfo;
 
-pub use self::common::*;
+pub use self::global_common::*;
 
-#[path = "../common/common.rs"]
-mod common;
+#[path = "../common/global_common.rs"]
+mod global_common;
 
 // Vertex with position and color
 
@@ -21,6 +21,6 @@ impl VertexBufferInfo for Vertex {
 
 
 pub fn run_example(title: &str, vertices: &[Vertex], indices: Option<&[u16]>) -> ! {
-    Config::with_vertices::<Vertex, u16, 0>(include_str!("triangle.wgsl"), &vertices, indices)
+    Config::with_vertices::<Vertex, u16, 0>(include_str!("triangle.wgsl"), vertices, indices)
         .run_title(title)
 }

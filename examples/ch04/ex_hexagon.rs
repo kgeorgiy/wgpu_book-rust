@@ -14,14 +14,12 @@ fn main() {
         [1.0, 0.0, 1.0],
     ];
 
-    let mut vertices = Vec::with_capacity(6);
-    for i in 0..6 {
-        let (sin, cos) = (i as f32 * PI / 3.0).sin_cos();
-        vertices.push(Vertex {
-            position: [cos * 0.5, sin * 0.5],
-            color: colors[i],
-        });
-    }
+    let vertices: Vec<Vertex> = colors.into_iter().enumerate()
+        .map(|(i, color)| {
+            let (sin, cos) = (i as f32 * PI / 3.0).sin_cos();
+            Vertex { position: [cos * 0.5, sin * 0.5], color }
+        })
+        .collect();
 
     let mut indices = Vec::with_capacity(4 * 3);
     for i in 0..4 {

@@ -5,7 +5,7 @@ use crate::common::vertex_data::torus_position;
 
 mod common;
 
-pub fn torus_vertices(r_torus:f32, r_tube:f32, n_torus:usize, n_tube:usize) -> Vec<VertexN> {
+fn torus_vertices(r_torus:f32, r_tube:f32, n_torus:usize, n_tube:usize) -> Vec<VertexN> {
     let d_u = Deg(360.0 / n_torus as f32);
     let d_v = Deg(360.0 / n_tube as f32);
 

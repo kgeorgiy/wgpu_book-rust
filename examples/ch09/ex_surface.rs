@@ -7,5 +7,5 @@ mod common;
 fn main() {
     let colormap = Colormap::by_name(CmdArgs::next("jet").as_str());
     let (kind, vertices) = surface_vertices(&colormap, true);
-    run_surface(format!("Chapter 09. {}", kind).as_str(), &vertices);
+    run_surface(format!("Chapter 09. {kind}").as_str(), &vertices);
 }

@@ -74,11 +74,11 @@ pub(crate) struct WebGPUContent {
 }
 
 impl WebGPUContent {
-    pub fn new<'a, const UL: usize>(window: &dyn RawWindow, conf: RenderConfiguration<UL>) -> Result<Box<dyn Content + 'a>> {
-        pollster::block_on(Self::new_async(window, conf))
+    pub fn content<'a, const UL: usize>(window: &dyn RawWindow, conf: RenderConfiguration<UL>) -> Result<Box<dyn Content + 'a>> {
+        pollster::block_on(Self::content_async(window, conf))
     }
 
-    pub async fn new_async<'a, const UL: usize>(
+    pub async fn content_async<'a, const UL: usize>(
         window: &dyn RawWindow,
         conf: RenderConfiguration<UL>,
     ) -> Result<Box<dyn Content + 'a>> {
@@ -98,7 +98,7 @@ impl WebGPUContent {
             &vertex_buffers.iter()
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>(),
-            &vec![&uniforms.bindings.layout, &textures.bindings.layout],
+            &[&uniforms.bindings.layout, &textures.bindings.layout],
             conf.shader_source.as_str(),
             wgpu::PrimitiveState {
                 topology: conf.topology,
@@ -150,7 +150,7 @@ impl WebGPUContent {
                 buffers: vertex_buffer_layouts,
             },
             fragment: Some(wgpu::FragmentState {
-                module: &&shader,
+                module: &shader,
                 entry_point: "fs_main",
                 targets: &[Some(format.into())],
             }),
@@ -168,7 +168,7 @@ impl WebGPUContent {
     }
 }
 
-impl<'a> Content for WebGPUContent {
+impl Content for WebGPUContent {
     fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.device.resize(width, height);

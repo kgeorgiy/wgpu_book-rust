@@ -5,7 +5,7 @@ use crate::common::vertex_data::cylinder_position;
 
 mod common;
 
-pub fn cone_vertices(r_top: f32, r_bottom: f32, height: f32, n: usize) -> Vec<VertexN> {
+fn cone_vertices(r_top: f32, r_bottom: f32, height: f32, n: usize) -> Vec<VertexN> {
     let h = height / 2.0;
     let d_theta = Deg(360.0 / n as f32);
 

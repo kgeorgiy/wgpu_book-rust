@@ -25,8 +25,8 @@ impl Config {
         -> RenderConfiguration<UL> where V: VertexBufferInfo, I: IndexBufferInfo
     {
         RenderConfiguration {
-            vertices: indices.map_or(vertices.len(), |idx| idx.len()),
-            vertex_buffers: vec![V::buffer("Vertices", &vertices)],
+            vertices: indices.map_or(vertices.len(), <[I]>::len),
+            vertex_buffers: vec![V::buffer("Vertices", vertices)],
             index_buffer: indices.map(|idx| I::buffer("Indices", idx)),
             ..Self::with_shader(shader_source)
         }
@@ -51,7 +51,7 @@ impl CmdArgs {
 
     pub(crate) fn next_known(known: &[&str]) -> String {
         let value = Self::next(known[0]);
-        assert!(known.iter().any(|k| value == k.to_string()), "Unknown argument '{}', expected one of {:?}", value, known);
+        assert!(known.iter().any(|k| value == *k), "Unknown argument '{value}', expected one of {known:?}");
         value
     }
 
