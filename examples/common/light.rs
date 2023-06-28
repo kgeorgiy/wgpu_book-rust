@@ -6,10 +6,10 @@ use core::time::Duration;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Angle, EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, PipelineConfiguration, VertexBufferInfo};
+use webgpu_book::{BufferInfo, BufferWriter, Content, ContentFactory, PipelineConfiguration, To, Uniform, UniformArray, VertexBufferInfo};
 use webgpu_book::transforms::{create_projection, create_rotation};
 
-use super::{CmdArgs, To, Uniform, VertexN};
+use super::{CmdArgs, VertexN};
 
 
 // Camera
@@ -125,12 +125,6 @@ impl To<ModelUniforms> for Model {
     }
 }
 
-impl<const L: usize> To<[ModelUniforms; L]> for [Model; L] {
-    fn to(&self) -> [ModelUniforms; L] {
-        self.clone().map(|model| model.to())
-    }
-}
-
 
 // View, ViewUniforms
 
@@ -150,6 +144,7 @@ impl To<CameraUniform> for OglCamera {
 
 pub struct ProtoUniforms<const ML: usize, LA: Pod> {
     models: [Model; ML],
+    instances: bool,
     camera: OglCamera,
     fragment: FragmentUniforms,
     light: LightUniforms<LA>,
@@ -180,7 +175,7 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
         vertices: &[V],
         light_aux: LA,
         models: [Matrix4<f32>; ML],
-        _instances: bool
+        instances: bool
     ) -> PipelineConfiguration {
         let eye = point3(3.0, 1.5, 3.0);
         let look_direction = -eye.to_vec();
@@ -190,6 +185,7 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
         let side = look_direction.cross(up_direction);
         let uniforms = ProtoUniforms {
             models: models.map(Model::new),
+            instances,
             camera: OglCamera::new(eye, look_direction, up_direction, fovy),
             fragment: FragmentUniforms::new(
                 eye.to_homogeneous().into(),
@@ -198,7 +194,8 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
             light: LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
             animation_speed: 1.0
         };
-        let config = Self::into_config(uniforms, shader_source);
+        let config = uniforms.into_config(shader_source)
+            .with_cull_mode(None);
         if CmdArgs::is("wireframe") {
             let vertices_n = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
 
@@ -209,19 +206,30 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
     }
 
     fn into_config(self, shader_source: &str) -> PipelineConfiguration {
-        let models: [ModelUniforms; ML] = self.models.to();
         let camera: CameraUniform = self.camera.to();
-        PipelineConfiguration::new(shader_source)
-            .with_uniforms(
-                [
-                    BufferInfo::buffer_format("Models uniform", &[models], wgpu::ShaderStages::VERTEX),
-                    BufferInfo::buffer_format("Camera uniform", &[camera], wgpu::ShaderStages::VERTEX),
-                    BufferInfo::buffer_format("Fragment uniform", &[self.fragment], wgpu::ShaderStages::FRAGMENT),
-                    BufferInfo::buffer_format("Light uniform", &[self.light], wgpu::ShaderStages::FRAGMENT),
-                ],
+        let models: UniformArray<ModelUniforms, ML> = self.models.to();
+
+        let camera_buffer = BufferInfo::buffer_format("Camera uniform", &[camera.to()], wgpu::ShaderStages::VERTEX);
+        let fragment_buffer = BufferInfo::buffer_format("Fragment uniform", &[self.fragment.to()], wgpu::ShaderStages::FRAGMENT);
+        let light_buffer = BufferInfo::buffer_format("Light uniform", &[self.light.to()], wgpu::ShaderStages::FRAGMENT);
+
+        let mut config = PipelineConfiguration::new(shader_source);
+
+        if self.instances {
+            config = config.with_instances(ML);
+            let model_buffer = BufferInfo::buffer_format("Models uniform", &models.as_instances(), wgpu::ShaderStages::VERTEX);
+            config.with_uniforms(
+                [model_buffer, camera_buffer, fragment_buffer, light_buffer],
                 Box::new(self),
             )
-            .with_instances(ML)
+        } else {
+            let model_buffer = BufferInfo::buffer_format("Models uniform", models.as_bindings(), wgpu::ShaderStages::VERTEX);
+            config.with_multi_uniforms(
+                [model_buffer, camera_buffer, fragment_buffer, light_buffer],
+                Box::new(self),
+                (0..ML).map(|i| [i, 0, 0, 0,]).collect()
+            )
+        }
     }
 }
 
@@ -238,13 +246,18 @@ impl<LA: Pod> ProtoUniforms<1, LA> {
 impl<const ML: usize, LA: Pod> ContentFactory<4> for ProtoUniforms<ML, LA> {
     fn create(
         self: Box<Self>,
-        [models_buffer, view_buffer, fragment_buffer, light_buffer]: [BufferWriter; 4]
+        [models_buffer, camera_buffer, fragment_buffer, light_buffer]: [BufferWriter; 4]
     ) -> Box<dyn Content> {
+        let models: Uniform<[Model; ML], ModelUniforms> = if self.instances {
+            models_buffer.to_instance_array(self.models)
+        } else {
+            models_buffer.to_binding_array(self.models)
+        };
         Box::new(Uniforms {
-            models: Uniform::new(self.models, models_buffer),
-            camera: Uniform::new(self.camera, view_buffer),
-            fragment: Uniform::new(self.fragment, fragment_buffer),
-            light: Uniform::new(self.light, light_buffer),
+            models,
+            camera: camera_buffer.to_value(self.camera),
+            fragment: fragment_buffer.to_value(self.fragment),
+            light: light_buffer.to_value(self.light),
 
             animation_speed: self.animation_speed,
         })
@@ -255,7 +268,7 @@ impl<const ML: usize, LA: Pod> ContentFactory<4> for ProtoUniforms<ML, LA> {
 
 #[allow(dead_code)]
 pub struct Uniforms<const ML: usize, LA: Pod> {
-    models: Uniform<[Model; ML], [ModelUniforms; ML]>,
+    models: Uniform<[Model; ML], ModelUniforms>,
     camera: Uniform<OglCamera, CameraUniform>,
     fragment: Uniform<FragmentUniforms, FragmentUniforms>,
     light: Uniform<LightUniforms<LA>, LightUniforms<LA>>,

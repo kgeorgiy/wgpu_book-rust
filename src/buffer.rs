@@ -6,6 +6,7 @@ use std::rc::Rc;
 use bytemuck::{cast_slice, Pod};
 use wgpu::{BindingResource, Buffer, BufferAddress, BufferBinding, BufferSize, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
+use crate::{To, Uniform};
 
 use crate::webgpu::WebGPUDevice;
 
@@ -14,7 +15,7 @@ use crate::webgpu::WebGPUDevice;
 #[derive(Clone, Debug)]
 pub(crate) struct BufferLayout {
     type_id: TypeId,
-    item_count: usize,
+    pub(crate) item_count: usize,
     item_size: usize,
     item_alignment: usize,
 }
@@ -59,18 +60,35 @@ pub struct BufferWriter {
 }
 
 impl BufferWriter {
-    /// Converts this buffer to typed one
-    ///
-    /// # Panics
-    /// If type of buffer does not equal to requested type
     pub fn to_typed<T: 'static>(self) -> TypedBufferWriter<T> {
-        assert_eq!(self.layout.type_id, TypeId::of::<T>(), "Invalid buffer type");
+        self.check_type::<T>();
         TypedBufferWriter { untyped: self, phantom: PhantomData::default() }
     }
 
-    fn write_slice<T: Pod + 'static>(&self, slice: &[T]) {
+    pub fn check_type<T: 'static>(&self) {
+        assert_eq!(self.layout.type_id, TypeId::of::<T>(), "Invalid buffer type");
+    }
+
+    pub fn write_slice<B: Pod + 'static>(&self, slice: &[B]) {
+        self.check_type::<B>();
         assert_eq!(self.layout.item_count, slice.len(), "Invalid slice length");
         self.queue.write_buffer(&self.buffer, 0, cast_slice(slice));
+    }
+
+    pub fn to_value<T, B>(self, state: T) -> Uniform<T, B> where T: To<B>, B: 'static + Pod {
+        Uniform::value(state, self)
+    }
+
+    pub fn to_instance_array<T, B, const L: usize>(self, state: [T; L])
+        -> Uniform<[T; L], B> where T: To<B> + Clone, B: 'static + Pod
+    {
+        Uniform::instance_array(state, self)
+    }
+
+    pub fn to_binding_array<T, B, const L: usize>(self, state: [T; L])
+        -> Uniform<[T; L], B> where T: To<B>, B: 'static + Pod
+    {
+        Uniform::binding_array(state, self)
     }
 }
 
@@ -97,7 +115,7 @@ pub struct SmartBufferDescriptor<F> {
     label: String,
     contents: Vec<u8>,
     usage: BufferUsages,
-    layout: BufferLayout,
+    pub(crate) layout: BufferLayout,
     format: F,
 }
 

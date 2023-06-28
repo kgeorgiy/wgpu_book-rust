@@ -8,21 +8,27 @@ use crate::webgpu::WebGPUDevice;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Binding<'a> {
-    pub(crate) resources: Vec<wgpu::BindingResource<'a>>,
     pub(crate) visibility: wgpu::ShaderStages,
     pub(crate) ty: wgpu::BindingType,
+    pub(crate) resources: Vec<wgpu::BindingResource<'a>>,
 }
 
 
-// BindGroup
+// BindGroupVariants
 
-pub(crate) struct BindGroup {
-    pub(crate) group: wgpu::BindGroup,
+pub(crate) struct BindGroupVariants {
     pub(crate) layout: wgpu::BindGroupLayout,
+    pub(crate) groups: Vec<wgpu::BindGroup>,
 }
 
-impl BindGroup {
-    pub(crate) fn new(wg: &WebGPUDevice, label: &str, bindings: Vec<Binding>) -> Self {
+impl BindGroupVariants {
+    #[allow(clippy::needless_pass_by_value)]
+    pub(crate) fn new(
+        wg: &WebGPUDevice,
+        label: &str,
+        bindings: Vec<Binding>,
+        variants: Vec<Vec<usize>>
+    ) -> Self {
         let layouts = &bindings.iter().enumerate()
             .map(|(index, binding)| wgpu::BindGroupLayoutEntry {
                 binding: usize_as_u32(index),
@@ -37,18 +43,22 @@ impl BindGroup {
             entries: layouts,
         });
 
-        let group = wg.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(format!("{label} Bing Group").as_str(), ),
-            layout: &layout,
-            entries: &bindings.into_iter().enumerate()
-                .map(|(index, binding)| wgpu::BindGroupEntry {
-                    binding: usize_as_u32(index),
-                    resource: binding.resources.into_iter().next().expect("should have at least one"),
-                })
-                .collect::<Vec<_>>(),
-        });
+        #[allow(clippy::indexing_slicing)]
+        let groups: Vec<wgpu::BindGroup> = variants.into_iter().enumerate()
+            .map(|(no, variant)| wg.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(format!("{label} Bing Group, variant {no}").as_str()),
+                layout: &layout,
+                entries: &variant.into_iter().zip(bindings.iter())
+                    .map(|(index, binds)| binds.resources[index].clone())
+                    .enumerate()
+                    .map(|(index, resource)| wgpu::BindGroupEntry {
+                        binding: usize_as_u32(index),
+                        resource
+                    })
+                    .collect::<Vec<_>>(),
+            })).collect();
 
-        Self { group, layout }
+        Self { layout, groups }
     }
 }
 
@@ -157,7 +167,7 @@ impl Texture {
 
 pub(crate) struct Textures {
     _textures: Vec<Texture>,
-    pub(crate) bindings: BindGroup,
+    pub(crate) variants: BindGroupVariants,
 }
 
 impl Textures {
@@ -169,7 +179,7 @@ impl Textures {
         let bindings = textures.iter().flat_map(Texture::bindings).collect::<Vec<_>>();
 
         Ok(Self {
-            bindings: BindGroup::new(wg, "Textures", bindings),
+            variants: BindGroupVariants::new(wg, "Textures", bindings, vec![vec![0, 0]]),
             _textures: textures,
         })
     }

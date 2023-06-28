@@ -109,7 +109,7 @@ impl WebGPURender {
             &vertex_buffers.iter()
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>(),
-            &[&uniforms.bindings.layout, &textures.bindings.layout],
+            &[&uniforms.variants.layout, &textures.variants.layout],
             conf.shader_source.as_str(),
             wgpu::PrimitiveState {
                 topology: conf.topology,
@@ -126,7 +126,8 @@ impl WebGPURender {
                 .map(|buffer| buffer.buffer)
                 .collect(),
             index_buffer,
-            bind_groups: vec![uniforms.bindings.group, textures.bindings.group],
+            uniform_groups: uniforms.variants.groups,
+            textures_groups: textures.variants.groups,
             instances: usize_as_u32(conf.instances)
         };
         Ok((pipeline, uniforms.content))
@@ -256,7 +257,8 @@ struct Pipeline {
     vertices: u32,
     vertex_buffers: Vec<wgpu::Buffer>,
     index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
-    bind_groups: Vec<wgpu::BindGroup>,
+    uniform_groups: Vec<wgpu::BindGroup>,
+    textures_groups: Vec<wgpu::BindGroup>,
     instances: u32
 }
 
@@ -268,15 +270,20 @@ impl Pipeline {
             render_pass.set_vertex_buffer(usize_as_u32(slot), buffer.slice(..));
         }
 
-        self.bind_groups.iter().enumerate()
-            .for_each(|(index, group)| render_pass.set_bind_group(usize_as_u32(index), group, &[]));
+        for group in &self.textures_groups {
+            render_pass.set_bind_group(1, group, &[]);
+        }
 
-        match self.index_buffer.as_ref() {
-            None => render_pass.draw(0..self.vertices, 0..self.instances),
-            Some(buffer) => {
-                render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
-                render_pass.draw_indexed(0..self.vertices, 0, 0..self.instances);
-            },
+        for group in &self.uniform_groups {
+            render_pass.set_bind_group(0, group, &[]);
+
+            match self.index_buffer.as_ref() {
+                None => render_pass.draw(0..self.vertices, 0..self.instances),
+                Some(buffer) => {
+                    render_pass.set_index_buffer(buffer.buffer.slice(..), buffer.format);
+                    render_pass.draw_indexed(0..self.vertices, 0, 0..self.instances);
+                },
+            }
         }
     }
 }

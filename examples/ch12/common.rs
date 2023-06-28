@@ -24,7 +24,6 @@ mod global_common;
         models,
         instances,
     )
-
         .with_textures([TextureInfo::repeated(format!("examples/ch11/assets/{texture_file}.png"))])
 }
 

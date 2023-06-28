@@ -9,4 +9,3 @@ fn main() {
     multi_pipeline(name.as_str(), true)
         .run_title(format!("Chapter 12. Multiple instances ({name})").as_str());
 }
-

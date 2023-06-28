@@ -113,12 +113,21 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use] pub fn with_uniforms<const UL: usize>(
+    #[must_use] pub fn with_uniforms<const L: usize>(
+        self,
+        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; L],
+        content_factory: Box<dyn ContentFactory<L>>
+    ) -> Self {
+        self.with_multi_uniforms(buffers, content_factory, vec!([0; L]))
+    }
+
+    #[must_use] pub fn with_multi_uniforms<const UL: usize>(
         mut self,
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
-        content_factory: Box<dyn ContentFactory<UL>>
+        content_factory: Box<dyn ContentFactory<UL>>,
+        variants: Vec<[usize; UL]>
     ) -> Self {
-        self.uniforms = Some(UniformsConfiguration::new(buffers, content_factory));
+        self.uniforms = Some(UniformsConfiguration::new(buffers, content_factory, variants));
         self
     }
 

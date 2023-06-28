@@ -4,9 +4,9 @@ use bytemuck::Pod;
 use cgmath::Deg;
 use winit::event::{DeviceEvent, ElementState};
 
-use webgpu_book::{Content, transforms::create_rotation};
+use webgpu_book::{Content, To, transforms::create_rotation};
 
-use crate::common::{Camera, CameraController, create_vertices, To};
+use crate::common::{Camera, CameraController, create_vertices};
 use crate::common::mvp::{Mvp, MvpContent, MvpFactory, MvpMatrix};
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 

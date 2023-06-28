@@ -12,5 +12,3 @@ fn main() -> ! {
     RenderConfiguration { pipelines: vec![wellen, torus]}
         .run_title("Chapter 12. Multiple pipelines")
 }
-
-
