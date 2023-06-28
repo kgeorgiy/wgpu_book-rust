@@ -1,9 +1,13 @@
-struct VertexUniforms {
-    model: mat4x4<f32>,
-    model_it: mat4x4<f32>,
+struct ModelUniforms {
+    points: mat4x4<f32>,
+    normals: mat4x4<f32>,
+}
+@group(0) @binding(0) var<uniform> model_u: ModelUniforms;
+
+struct CameraUniforms {
     view_project: mat4x4<f32>,
-};
-@group(0) @binding(0) var<uniform> vertex_u: VertexUniforms;
+}
+@group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
 
 struct Output {
     @builtin(position) position: vec4<f32>,
@@ -13,7 +17,7 @@ struct Output {
 @vertex
 fn vs_main(@location(0) pos: vec4<f32>, @location(1) normal: vec4<f32>) -> Output {
     var output: Output;
-    output.position = vertex_u.view_project * vertex_u.model * pos;
+    output.position = camera_u.view_project * model_u.points * pos;
     if (length(normal) == 0.0) {
         output.v_color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
     } else {

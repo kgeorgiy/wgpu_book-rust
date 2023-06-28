@@ -154,46 +154,10 @@ pub struct ProtoUniforms<const ML: usize, LA: Pod> {
     fragment: FragmentUniforms,
     light: LightUniforms<LA>,
     animation_speed: f32,
-    shader_source: String,
-    cull_mode: Option<wgpu::Face>,
 }
 
 impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
-    pub fn new(
-        models: [Model; ML],
-        camera: OglCamera,
-        fragment: FragmentUniforms,
-        light: LightUniforms<LA>,
-        animation_speed: f32,
-        shader_source: String,
-        cull_mode: Option<wgpu::Face>
-    ) -> Self {
-        ProtoUniforms {
-            models,
-            camera,
-            fragment,
-            light,
-            animation_speed,
-            shader_source,
-            cull_mode,
-        }
-    }
-
-    pub fn run<V: VertexBufferInfo + Into<VertexN>>(self, title: &str, vertices: &[V]) -> ! {
-        self.into_advanced_config(vertices).run_title(title)
-    }
-
-    fn into_advanced_config<V: VertexBufferInfo + Into<VertexN>>(self, vertices: &[V]) -> PipelineConfiguration {
-        if CmdArgs::is("wireframe") {
-            let vertices_n = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
-            self.wireframe(&vertices_n, 0.1)
-        } else {
-            println!("Here");
-            self.into_config().with_vertices(vertices)
-        }
-    }
-
-    fn wireframe(self, vertices: &[VertexN], normal_len: f32) -> PipelineConfiguration {
+    fn wireframe(config: PipelineConfiguration, vertices: &[VertexN], normal_len: f32) -> PipelineConfiguration {
         let mut wireframe_vertices: Vec<VertexN> = Vec::with_capacity(vertices.len() * 4);
         for face in vertices.chunks_exact(3) {
             #[allow(clippy::indexing_slicing)]
@@ -205,18 +169,49 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
             }
         }
 
-        self.into_config()
-            .with_shader(include_str!("wireframe.wgsl"))
+        config
             .with_vertices(&wireframe_vertices)
+            .with_shader(include_str!("wireframe.wgsl"))
             .with_topology(wgpu::PrimitiveTopology::LineList)
     }
 
-    pub fn into_config(self) -> PipelineConfiguration {
+    pub fn example_models<V: VertexBufferInfo + Into<VertexN>>(
+        shader_source: &str,
+        vertices: &[V],
+        light_aux: LA,
+        models: [Matrix4<f32>; ML],
+        _instances: bool
+    ) -> PipelineConfiguration {
+        let eye = point3(3.0, 1.5, 3.0);
+        let look_direction = -eye.to_vec();
+        let up_direction = Vector3::unit_y();
+        let fovy = Rad(2.0 * PI / 5.0);
+
+        let side = look_direction.cross(up_direction);
+        let uniforms = ProtoUniforms {
+            models: models.map(Model::new),
+            camera: OglCamera::new(eye, look_direction, up_direction, fovy),
+            fragment: FragmentUniforms::new(
+                eye.to_homogeneous().into(),
+                (side.normalize() - look_direction.normalize() * 2.0).extend(0.0).into()
+            ),
+            light: LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
+            animation_speed: 1.0
+        };
+        let config = Self::into_config(uniforms, shader_source);
+        if CmdArgs::is("wireframe") {
+            let vertices_n = vertices.iter().map(|v| (*v).into()).collect::<Vec<_>>();
+
+            Self::wireframe(config, &vertices_n, 0.1)
+        } else {
+            config.with_vertices(vertices)
+        }
+    }
+
+    fn into_config(self, shader_source: &str) -> PipelineConfiguration {
         let models: [ModelUniforms; ML] = self.models.to();
         let camera: CameraUniform = self.camera.to();
-        PipelineConfiguration::new(self.shader_source.as_str())
-            .with_cull_mode(self.cull_mode)
-            .with_instances(ML)
+        PipelineConfiguration::new(shader_source)
             .with_uniforms(
                 [
                     BufferInfo::buffer_format("Models uniform", &[models], wgpu::ShaderStages::VERTEX),
@@ -226,33 +221,17 @@ impl<const ML: usize, LA: Pod> ProtoUniforms<ML, LA> {
                 ],
                 Box::new(self),
             )
-    }
-
-    pub fn example_models(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA, models: [Matrix4<f32>; ML]) -> ProtoUniforms<ML, LA> {
-        let eye = point3(3.0, 1.5, 3.0);
-        let look_direction = -eye.to_vec();
-        let up_direction = Vector3::unit_y();
-        let fovy = Rad(2.0 * PI / 5.0);
-
-        let side = look_direction.cross(up_direction);
-        Self::new(
-            models.map(Model::new),
-            OglCamera::new(eye, look_direction, up_direction, fovy),
-            FragmentUniforms::new(
-                eye.to_homogeneous().into(),
-                (side.normalize() - look_direction.normalize() * 2.0).extend(0.0).into()
-            ),
-            LightUniforms::new(point3(1.0, 1.0, 0.0), 0.1, 1.0, 2.0, 30.0, light_aux),
-            1.0,
-            shader_source,
-            cull_mode,
-        )
+            .with_instances(ML)
     }
 }
 
 impl<LA: Pod> ProtoUniforms<1, LA> {
-    pub fn example_aux(shader_source: String, cull_mode: Option<wgpu::Face>, light_aux: LA) -> Self {
-        Self::example_models(shader_source, cull_mode, light_aux, [Matrix4::identity()])
+    pub fn example_aux<V: VertexBufferInfo + Into<VertexN>>(
+        shader_source: &str,
+        vertices: &[V],
+        light_aux: LA,
+    ) -> PipelineConfiguration {
+        Self::example_models(shader_source, vertices, light_aux, [Matrix4::identity()], true)
     }
 }
 
@@ -319,12 +298,10 @@ impl TwoSideLightAux {
         }
     }
 
-    #[must_use] pub fn example(shader: &str) -> ProtoUniforms<1, TwoSideLightAux> {
-        let is_two_side = CmdArgs::next("false").parse().expect("true of false");
-        ProtoUniforms::example_aux(
-            shader.to_owned(),
-            None,
-            Self::new(is_two_side),
-        )
+    #[must_use] pub fn example<V: VertexBufferInfo + Into<VertexN>>(shader: &str, vertices: &[V])
+        -> PipelineConfiguration
+    {
+        let is_two_side = CmdArgs::next_bool("Is two side", false);
+        ProtoUniforms::example_aux(shader, vertices, Self::new(is_two_side))
     }
 }

@@ -1,5 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::point3;
+use webgpu_book::{PipelineConfiguration, VertexBufferInfo};
 
 use crate::common::light::ProtoUniforms;
 
@@ -18,11 +19,8 @@ pub struct LightAux {
 
 impl LightAux {
     #[allow(dead_code)]
-    pub fn example() -> ProtoUniforms<1, LightAux> {
-        ProtoUniforms::example_aux(
-            include_str!("shader.wgsl").to_owned(),
-            None,
-            LightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() },
-        )
+    pub fn example<V: VertexBufferInfo + Into<VertexN>>(vertices: &[V]) -> PipelineConfiguration {
+        let aux = LightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() };
+        ProtoUniforms::example_aux(include_str!("shader.wgsl"), vertices, aux)
     }
 }

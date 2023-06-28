@@ -146,6 +146,12 @@ impl VertexBufferInfo for VertexNT {
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x2];
 }
 
+impl From<VertexNT> for VertexN {
+    fn from(value: VertexNT) -> Self {
+        Self { position: value.position, normal: value.normal }
+    }
+}
+
 
 // Vertex with position, normal, texture coordinates, and color
 
@@ -186,12 +192,18 @@ impl VertexBufferInfo for VertexNCT {
 
 impl From<VertexNCT> for VertexNT {
     fn from(value: VertexNCT) -> Self {
-        VertexNT { position: value.position, normal: value.normal, uv: value.uv }
+        Self { position: value.position, normal: value.normal, uv: value.uv }
     }
 }
 
 impl From<VertexNCT> for VertexNC {
     fn from(value: VertexNCT) -> Self {
-        VertexNC { position: value.position, normal: value.normal, color: value.color }
+        Self { position: value.position, normal: value.normal, color: value.color }
+    }
+}
+
+impl From<VertexNCT> for VertexN {
+    fn from(value: VertexNCT) -> Self {
+        Self { position: value.position, normal: value.normal }
     }
 }

@@ -13,5 +13,5 @@ fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> VertexN {
 }
 
 fn main() {
-    LightAux::example().run("Chapter 8. Sphere", &sphere_vertices(1.5, 10, 20, sphere_vertex));
+    LightAux::example(&sphere_vertices(1.5, 10, 20, sphere_vertex)).run_title("Chapter 8. Sphere");
 }

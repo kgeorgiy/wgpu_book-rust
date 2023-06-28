@@ -25,10 +25,15 @@ impl CmdArgs {
         ARGS.with(|cell| cell.borrow_mut().pop().unwrap_or(default.to_owned()))
     }
 
-    pub(crate) fn next_known(known: &[&str]) -> String {
+    pub(crate) fn next_known(description: &str, known: &[&str]) -> String {
         let value = Self::next(known.first().expect("at least one known variant"));
-        assert!(known.iter().any(|k| value == *k), "Unknown argument '{value}', expected one of {known:?}");
+        assert!(known.iter().any(|k| value == *k), "{description}: unknown argument '{value}', expected one of {known:?}");
         value
+    }
+
+    pub fn next_bool(description: &str, default: bool) -> bool {
+        let known = if default { ["true", "false"] } else { ["false", "true"] };
+        CmdArgs::next_known(description, &known).parse().expect("true of false")
     }
 
     pub(crate) fn is(expected: &str) -> bool {

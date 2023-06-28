@@ -144,12 +144,16 @@ name = "ch11_surface"
 path = "examples/ch11/ex_surface.rs"
 
 [[example]]
+name = "ch12_bindings"
+path = "examples/ch12/ex_bindings.rs"
+
+[[example]]
 name = "ch12_instances"
 path = "examples/ch12/ex_instances.rs"
 
 [[example]]
-name = "ch12_different"
-path = "examples/ch12/ex_different.rs"
+name = "ch12_merged"
+path = "examples/ch12/ex_merged.rs"
 
 [[example]]
 name = "ch12_pipelines"

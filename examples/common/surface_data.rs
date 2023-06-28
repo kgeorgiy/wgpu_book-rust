@@ -216,7 +216,7 @@ pub fn parametric_mesh_data<V: From<VertexNCT> + Copy>(
 }
 
 #[must_use] pub fn read_args_surface_name() -> String {
-    CmdArgs::next_known(&[
+    CmdArgs::next_known("Surface type", &[
         "sinc", "peaks",
         "klein", "wellen", "seashell", "sievert", "breather",
         "torus", "sphere",

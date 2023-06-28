@@ -1,5 +1,5 @@
-use cgmath::{Matrix4, vec3};
-use crate::common::{run_example, VertexNCT};
+use cgmath::{Matrix4, SquareMatrix, vec3};
+use crate::common::{example_models, VertexNCT};
 use crate::common::colormap::Colormap;
 use crate::common::surface_data::surface_vertices;
 
@@ -23,5 +23,7 @@ fn main() {
             })
         )
         .collect();
-    run_example("Chapter 12. Different shapes", &vertices);
+
+    example_models(&vertices, [Matrix4::identity()], true)
+        .run_title("Chapter 12. Merged vertices");
 }

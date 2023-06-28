@@ -41,5 +41,6 @@ fn torus_vertex(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> VertexN 
 }
 
 fn main() {
-    LightAux::example().run("Chapter 8. Torus", &torus_vertices(1.5, 0.4, 20, 20));
+    LightAux::example(&torus_vertices(1.5, 0.4, 20, 20))
+        .run_title("Chapter 8. Torus")
 }

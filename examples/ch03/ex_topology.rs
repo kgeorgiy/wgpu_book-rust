@@ -8,7 +8,7 @@ use crate::global_common::CmdArgs;
 mod global_common;
 
 fn main() {
-    let primitive_type = CmdArgs::next_known(&[
+    let primitive_type = CmdArgs::next_known("Topology", &[
         "triangle-strip",
         "point-list",
         "line-list",

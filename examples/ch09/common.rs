@@ -6,6 +6,6 @@ pub use self::global_common::*;
 mod global_common;
 
 pub fn run_surface(title: &str, vertices: &[VertexNC]) -> ! {
-    TwoSideLightAux::example(include_str!("shader.wgsl"))
-        .run(title, vertices)
+    TwoSideLightAux::example(include_str!("shader.wgsl"), vertices)
+        .run_title(title)
 }
