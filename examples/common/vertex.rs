@@ -25,6 +25,12 @@ impl VertexBufferInfo for Vertex {
         &wgpu::vertex_attr_array![0=>Float32x4];
 }
 
+impl From<Vertex> for VertexN {
+    fn from(value: Vertex) -> Self {
+        Self { position: value.position, normal: VertexN::FAKE_NORMAL.into() }
+    }
+}
+
 
 // Vertex with position and color
 
@@ -48,6 +54,12 @@ impl VertexC {
 impl VertexBufferInfo for VertexC {
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
+}
+
+impl From<VertexC> for VertexN {
+    fn from(value: VertexC) -> Self {
+        Self { position: value.position, normal: VertexN::FAKE_NORMAL.into() }
+    }
 }
 
 

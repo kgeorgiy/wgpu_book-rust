@@ -159,3 +159,11 @@ path = "examples/ch12/ex_merged.rs"
 [[example]]
 name = "ch12_pipelines"
 path = "examples/ch12/ex_pipelines.rs"
+
+[[example]]
+name = "ch12_surface"
+path = "examples/ch12/ex_surface.rs"
+
+[[example]]
+name = "ch12_two_pass"
+path = "examples/ch12/ex_two_pass.rs"

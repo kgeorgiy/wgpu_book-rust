@@ -15,12 +15,49 @@ mod uniforms;
 // RenderConfiguration
 
 pub struct RenderConfiguration {
-    pub pipelines: Vec<PipelineConfiguration<>>
+    render_passes: Vec<RenderPassConfiguration>,
 }
 
 impl RenderConfiguration {
+    pub fn new(passes: Vec<RenderPassConfiguration>) -> Self {
+        Self { render_passes: passes }
+    }
+
     pub fn run_title(self, title: &str) -> ! {
         run_wgpu(&WindowConfiguration { title }, self);
+    }
+}
+
+// RenderPassConfiguration
+
+pub struct RenderPassConfiguration {
+    pipelines: Vec<PipelineConfiguration>,
+    load: wgpu::LoadOp<wgpu::Color>,
+    depth: Option<DepthConfiguration>,
+}
+
+impl RenderPassConfiguration {
+    pub fn run_title(self, title: &str) -> ! {
+        RenderConfiguration::new(vec![self]).run_title(title)
+    }
+
+    pub fn new(pipelines: Vec<PipelineConfiguration>) -> Self {
+        Self {
+            pipelines,
+            load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.05, g: 0.062, b: 0.08, a: 1.0 }),
+            depth: Some(DepthConfiguration { format: wgpu::TextureFormat::Depth24Plus }),
+        }
+    }
+
+    pub fn with_load(mut self, load: wgpu::LoadOp<wgpu::Color>) -> Self {
+        self.load = load;
+        self
+    }
+
+
+    pub fn with_depth(mut self, format: Option<wgpu::TextureFormat>) -> Self {
+        self.depth = format.map(|frm| DepthConfiguration { format: frm });
+        self
     }
 }
 
@@ -142,9 +179,17 @@ impl PipelineConfiguration {
     }
 
     pub fn run_title(self, title: &str) -> ! {
-        RenderConfiguration { pipelines: vec![self] }.run_title(title);
+        RenderPassConfiguration::new(vec![self]).run_title(title);
     }
 }
+
+
+// DepthConfiguration
+
+struct DepthConfiguration {
+    format: wgpu::TextureFormat,
+}
+
 
 
 pub fn run_wgpu(window_config: &WindowConfiguration, render_config: RenderConfiguration) -> ! {

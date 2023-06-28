@@ -3,7 +3,7 @@ use core::time::Duration;
 
 use anyhow::Result;
 
-use crate::{CompositeContent, Content, RawWindow, PipelineConfiguration, SmartBuffer, usize_as_u32, RenderConfiguration};
+use crate::{CompositeContent, Content, RawWindow, PipelineConfiguration, SmartBuffer, usize_as_u32, RenderPassConfiguration, RenderConfiguration};
 use crate::bindings::Textures;
 use crate::uniforms::Uniforms;
 
@@ -67,7 +67,7 @@ impl WebGPUDevice {
 
 pub(crate) struct WebGPURender {
     wg: WebGPUDevice,
-    pipelines: Vec<Pipeline>,
+    render_passes: Vec<RenderPass>,
 }
 
 impl WebGPURender {
@@ -77,24 +77,174 @@ impl WebGPURender {
 
     pub async fn content_async<'a>(
         window: &dyn RawWindow,
-        conf: RenderConfiguration,
+        render_conf: RenderConfiguration,
     ) -> Result<Box<dyn Content + 'a>> {
         let wg = WebGPUDevice::new(window).await;
 
-        let (pipelines, mut contents): (Vec<Pipeline>, Vec<Box<dyn Content>>)
-            = conf.pipelines.into_iter()
-                .map(|pipeline| Self::configure_pipeline(pipeline, &wg))
-                .collect::<Result<Vec<_>>>()?
-                .into_iter().unzip();
+        // render_conf.passes.into_iter()
+        //     .map(|conf| )
 
-        contents.push(Box::new(WebGPURender { wg, pipelines }));
+        let (render_passes, contents_2d): (Vec<RenderPass>, Vec<Vec<Box<dyn Content>>>) =
+            render_conf.render_passes.into_iter()
+                .map(|render_pass| RenderPass::new(render_pass, &wg))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .unzip();
+
+        let mut contents: Vec<Box<dyn Content>> = contents_2d.into_iter().flatten().collect();
+        contents.push(Box::new(WebGPURender { wg, render_passes }));
 
         Ok(Box::new(CompositeContent { parts: contents }))
     }
 
-    fn configure_pipeline(conf: PipelineConfiguration, wg: &WebGPUDevice)
-        -> Result<(Pipeline, Box<dyn Content>)>
+    fn render(&self, wg: &WebGPUDevice) {
+        let frame = wg.surface.get_current_texture().expect("Current texture");
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = wg.device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        {
+            for render_pass in &self.render_passes {
+                render_pass.render(wg, &mut encoder, &view)
+            }
+        }
+        wg.queue.submit(Some(encoder.finish()));
+        frame.present();
+    }
+}
+
+impl Content for WebGPURender {
+    fn resize(&mut self, width: u32, height: u32) {
+        if width > 0 && height > 0 {
+            self.wg.resize(width, height);
+        }
+    }
+
+    fn update(&mut self, _dt: Duration) {
+        let wg = &self.wg;
+        self.render(&wg);
+    }
+}
+
+// Pipeline
+
+struct RenderPass {
+    pipelines: Vec<Pipeline>,
+    load: wgpu::LoadOp<wgpu::Color>,
+    depth: Option<Depth>,
+}
+
+impl RenderPass {
+    fn new(conf: RenderPassConfiguration, wg: &WebGPUDevice)
+        -> Result<(RenderPass, Vec<Box<dyn Content>>)>
     {
+        let depth = conf.depth.map(|depth_conf| Depth { format: depth_conf.format });
+        let (pipelines, contents) = conf.pipelines.into_iter()
+            .map(|pipeline| Pipeline::new(
+                pipeline,
+                &wg,
+                depth.as_ref().map(Depth::stencil)
+            ))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter().unzip();
+        Ok((RenderPass { pipelines, load: conf.load, depth }, contents))
+    }
+
+    pub(crate) fn render(
+        &self,
+        wg: &WebGPUDevice,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView
+    ) {
+        let depth = self.depth.as_ref().map(|depth| depth.begin_render_pass(wg));
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                resolve_target: None,
+                ops: wgpu::Operations { load: self.load, store: true },
+            })],
+            depth_stencil_attachment: depth.as_ref().map(RuntimeDepth::attachment),
+        });
+
+        for pipeline in &self.pipelines {
+            pipeline.render(&mut render_pass);
+        }
+    }
+
+}
+
+struct Depth {
+    format: wgpu::TextureFormat,
+}
+
+impl Depth {
+    fn stencil(&self) -> wgpu::DepthStencilState {
+        wgpu::DepthStencilState {
+            format: self.format,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::LessEqual,
+            stencil: wgpu::StencilState::default(),
+            bias: wgpu::DepthBiasState::default(),
+        }
+    }
+
+    fn begin_render_pass(&self, wg: &WebGPUDevice) -> RuntimeDepth {
+        let texture = wg.device.create_texture(&wgpu::TextureDescriptor {
+            size: wgpu::Extent3d {
+                width: wg.surface_config.width,
+                height: wg.surface_config.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: self.format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            label: None,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        RuntimeDepth { _texture: texture, view }
+    }
+}
+
+struct RuntimeDepth {
+    _texture: wgpu::Texture,
+    view: wgpu::TextureView,
+}
+
+impl RuntimeDepth {
+    fn attachment(&self) -> wgpu::RenderPassDepthStencilAttachment {
+        wgpu::RenderPassDepthStencilAttachment {
+            view: &self.view,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(1.0),
+                store: false,
+            }),
+            stencil_ops: None,
+        }
+    }
+}
+
+
+// Pipeline
+
+struct Pipeline {
+    pipeline: wgpu::RenderPipeline,
+    vertices: u32,
+    vertex_buffers: Vec<wgpu::Buffer>,
+    index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
+    uniform_groups: Vec<wgpu::BindGroup>,
+    textures_groups: Vec<wgpu::BindGroup>,
+    instances: u32
+}
+
+impl Pipeline {
+    fn new(
+        conf: PipelineConfiguration,
+        wg: &WebGPUDevice,
+        depth_stencil: Option<wgpu::DepthStencilState>
+    ) -> Result<(Pipeline, Box<dyn Content>)> {
         let vertex_buffers = conf.vertices.into_iter()
             .map(|descriptor| descriptor.create_buffer(wg))
             .collect::<Vec<_>>();
@@ -117,6 +267,7 @@ impl WebGPURender {
                 cull_mode: conf.cull_mode,
                 ..Default::default()
             },
+            depth_stencil,
         );
 
         let pipeline = Pipeline {
@@ -140,6 +291,7 @@ impl WebGPURender {
         bind_group_layouts: &[&wgpu::BindGroupLayout],
         shader_source: &str,
         primitive: wgpu::PrimitiveState,
+        depth_stencil: Option<wgpu::DepthStencilState>,
     ) -> wgpu::RenderPipeline {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
@@ -166,103 +318,12 @@ impl WebGPURender {
                 targets: &[Some(format.into())],
             }),
             primitive,
-            depth_stencil: Some(wgpu::DepthStencilState {
-                format: wgpu::TextureFormat::Depth24Plus,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::LessEqual,
-                stencil: wgpu::StencilState::default(),
-                bias: wgpu::DepthBiasState::default(),
-            }),
+            depth_stencil,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         })
     }
-}
 
-impl Content for WebGPURender {
-    fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.wg.resize(width, height);
-        }
-    }
-
-    fn update(&mut self, _dt: Duration) {
-        let frame = self
-            .wg
-            .surface
-            .get_current_texture()
-            .expect("Current texture");
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
-            .wg
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        {
-            let depth_texture = self.wg.device.create_texture(&wgpu::TextureDescriptor {
-                size: wgpu::Extent3d {
-                    width: self.wg.surface_config.width,
-                    height: self.wg.surface_config.height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Depth24Plus,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                label: None,
-                view_formats: &[wgpu::TextureFormat::Depth24Plus],
-            });
-            let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.05,
-                            g: 0.062,
-                            b: 0.08,
-                            a: 1.0,
-                        }),
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: false,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-
-            for pipeline in &self.pipelines {
-                pipeline.render(&mut render_pass);
-            }
-        }
-        self.wg.queue.submit(Some(encoder.finish()));
-        frame.present();
-    }
-}
-
-
-// Pipeline
-
-struct Pipeline {
-    pipeline: wgpu::RenderPipeline,
-    vertices: u32,
-    vertex_buffers: Vec<wgpu::Buffer>,
-    index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
-    uniform_groups: Vec<wgpu::BindGroup>,
-    textures_groups: Vec<wgpu::BindGroup>,
-    instances: u32
-}
-
-impl Pipeline {
     fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
 

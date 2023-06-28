@@ -53,6 +53,10 @@ impl Colormap {
             a + (b - a) * (tn * len1 - index as f32)
         }
     }
+
+    pub(crate) fn fixed(color: Point3<f32>) -> Self {
+        Self::new(&[color.into()])
+    }
 }
 
 // ColorInterpolator

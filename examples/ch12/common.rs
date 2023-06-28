@@ -1,10 +1,10 @@
 use cgmath::{Matrix4, SquareMatrix, vec3};
 
 use webgpu_book::{PipelineConfiguration, TextureInfo};
-use crate::common::colormap::Colormap;
 
+use crate::common::colormap::Colormap;
 use crate::common::light::{ProtoUniforms, TwoSideLightAux};
-use crate::common::surface_data::surface_vertices;
+use crate::common::surface_data::Surface;
 
 pub use self::global_common::*;
 
@@ -28,12 +28,12 @@ mod global_common;
 }
 
 #[allow(dead_code, clippy::indexing_slicing)]
-#[must_use] pub fn multi_pipeline(surface_name: &str, instances: bool) -> PipelineConfiguration {
+#[must_use] pub fn multi_pipeline(surface: &Surface, instances: bool) -> PipelineConfiguration {
     const ROWS: usize = 7;
     const COLS: usize = 5;
 
     let colormap = Colormap::by_name("jet");
-    let vertices = surface_vertices(surface_name, &colormap, false);
+    let vertices = Surface::surface_vertices(surface, &&colormap, false);
 
     let scale = 1.0 / (COLS - 1) as f32;
     let scale_m = Matrix4::from_scale(scale);

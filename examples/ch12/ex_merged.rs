@@ -1,7 +1,7 @@
 use cgmath::{Matrix4, SquareMatrix, vec3};
 use crate::common::{example_models, VertexNCT};
 use crate::common::colormap::Colormap;
-use crate::common::surface_data::surface_vertices;
+use crate::common::surface_data::Surface;
 
 mod common;
 
@@ -18,7 +18,7 @@ fn main() {
             .flat_map(move |(j, name)| {
                 let translation = vec3((i as f32 - 1.0) * 2.0, (j as f32 - 1.0) * 2.0, 0.0);
                 let transform = Matrix4::from_translation(translation) * scale;
-                surface_vertices(name, colormap, false).into_iter()
+                Surface::by_name(name).surface_vertices(colormap, false).into_iter()
                     .map(move |vertex: VertexNCT| vertex.transform(transform))
             })
         )
