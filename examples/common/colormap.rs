@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use cgmath::Point3;
 
 // Colormap

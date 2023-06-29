@@ -54,6 +54,6 @@ fn outer(p: Point3<f32>, other: Point3<f32>) -> VertexN {
 
 
 fn main() {
-    LightAux::example(&cone_vertices(0.5, 1.5, 2.0, 12))
+    LightAux::example(cone_vertices(0.5, 1.5, 2.0, 12))
         .run_title("Chapter 8. Cone");
 }

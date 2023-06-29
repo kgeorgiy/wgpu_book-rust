@@ -30,5 +30,5 @@ const VERTICES: &[Vertex] = &[
 const INDICES: &[u16] = &[0, 1, 3, 3, 1, 2];
 
 fn main() {
-    run_example("Chapter 4. Square (indexed)", VERTICES, Some(INDICES));
+    run_example("Chapter 4. Square (indexed)", VERTICES.to_vec(), Some(INDICES));
 }

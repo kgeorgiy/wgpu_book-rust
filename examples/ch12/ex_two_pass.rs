@@ -16,14 +16,14 @@ fn main() -> ! {
     let colormap = &Colormap::by_name("jet");
 
     let wireframe_vertices: Vec<VertexC> = surface.wireframe_vertices(point3(1.0, 1.0, 1.0));
-    let mesh = TwoSideLightAux::example(include_str!("mesh.wgsl"), &wireframe_vertices)
+    let mesh = TwoSideLightAux::example(include_str!("mesh.wgsl"), wireframe_vertices)
         .with_topology(wgpu::PrimitiveTopology::LineList);
 
     let surface_vertices: Vec<VertexNC> = surface.surface_vertices(colormap, false);
-    let faces = TwoSideLightAux::example(include_str!("../ch09/shader.wgsl"), &surface_vertices);
+    let faces = TwoSideLightAux::example(include_str!("../ch09/shader.wgsl"), surface_vertices);
     
     let axes_vertices: Vec<VertexC> = surface.axes_vertices();
-    let axes = TwoSideLightAux::example(include_str!("mesh.wgsl"), &axes_vertices)
+    let axes = TwoSideLightAux::example(include_str!("mesh.wgsl"), axes_vertices)
         .with_topology(wgpu::PrimitiveTopology::LineList);
 
     RenderConfiguration::new(vec![

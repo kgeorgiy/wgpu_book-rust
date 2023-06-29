@@ -13,5 +13,5 @@ fn sphere_vertex(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> VertexNT {
 }
 
 fn main() {
-    run_example("Chapter 10. Sphere", &sphere_vertices(1.7, 30, 50, sphere_vertex));
+    run_example("Chapter 10. Sphere", sphere_vertices(1.7, 30, 50, sphere_vertex));
 }

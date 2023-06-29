@@ -104,7 +104,7 @@ impl WebGPURender {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         {
             for render_pass in &self.render_passes {
-                render_pass.render(wg, &mut encoder, &view)
+                render_pass.render(wg, &mut encoder, &view);
             }
         }
         wg.queue.submit(Some(encoder.finish()));
@@ -121,7 +121,7 @@ impl Content for WebGPURender {
 
     fn update(&mut self, _dt: Duration) {
         let wg = &self.wg;
-        self.render(&wg);
+        self.render(wg);
     }
 }
 
@@ -141,7 +141,7 @@ impl RenderPass {
         let (pipelines, contents) = conf.pipelines.into_iter()
             .map(|pipeline| Pipeline::new(
                 pipeline,
-                &wg,
+                wg,
                 depth.as_ref().map(Depth::stencil)
             ))
             .collect::<Result<Vec<_>>>()?

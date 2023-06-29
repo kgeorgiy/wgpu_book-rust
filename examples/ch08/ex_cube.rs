@@ -12,5 +12,5 @@ fn create_vertices() -> Vec<VertexN> {
 }
 
 fn main() {
-    LightAux::example(&create_vertices()).run_title("Chapter 8. Cube");
+    LightAux::example(create_vertices()).run_title("Chapter 8. Cube");
 }

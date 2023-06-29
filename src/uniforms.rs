@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 
@@ -7,6 +5,7 @@ use bytemuck::Pod;
 
 use crate::{BufferWriter, Content, NoContent, SmartBufferDescriptor, TypedBufferWriter};
 use crate::bindings::{BindGroupVariants, Binding};
+use crate::boxed::{BoxedFunc, FuncBox};
 use crate::buffer::SmartBuffer;
 use crate::webgpu::WebGPUDevice;
 
@@ -14,14 +13,15 @@ use crate::webgpu::WebGPUDevice;
 
 pub(crate) struct UniformsConfiguration {
     buffers: Vec<SmartBufferDescriptor<wgpu::ShaderStages>>,
-    content_factory: Box<dyn UnsafeContentFactory>,
+    content_factory: UnsafeContentFactory,
     variants: Vec<Vec<usize>>,
 }
 
 impl UniformsConfiguration {
-    #[must_use] pub(crate) fn new<const UL: usize>(
+    #[must_use]
+    pub(crate) fn new<const UL: usize>(
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
-        content_factory: Box<dyn ContentFactory<UL>>,
+        content_factory: ContentFactory<UL>,
         variants: Vec<[usize; UL]>
     ) -> Self {
         for variant in &variants {
@@ -31,7 +31,7 @@ impl UniformsConfiguration {
         }
 
         Self {
-            content_factory: Box::new(content_factory),
+            content_factory: content_factory.before(|bufs: Vec<BufferWriter>| bufs.try_into().expect("valid size")),
             buffers: buffers.into_iter().collect(),
             variants: variants.into_iter()
                 .map(move |variant| variant.into_iter().collect())
@@ -43,25 +43,21 @@ impl UniformsConfiguration {
 
 // Content Factories
 
-pub trait ContentFactory<const UL: usize> {
-    fn create(self: Box<Self>, uniforms: [BufferWriter; UL]) -> Box<dyn Content>;
-}
+pub type ContentFactory<const UL: usize> = FuncBox<[BufferWriter; UL], Box<dyn Content>>;
 
 struct NoContentFactory;
 
-impl ContentFactory<0> for NoContentFactory {
-    fn create(self: Box<Self>, _uniforms: [BufferWriter; 0]) -> Box<dyn Content> {
+impl BoxedFunc<[BufferWriter; 0], Box<dyn Content>> for NoContentFactory {
+    fn apply(self: Box<Self>, _uniforms: [BufferWriter; 0]) -> Box<dyn Content> {
         Box::new(NoContent)
     }
 }
 
-trait UnsafeContentFactory {
-    fn create(self: Box<Self>, uniforms: Vec<BufferWriter>) -> Box<dyn Content>;
-}
+pub type UnsafeContentFactory = FuncBox<Vec<BufferWriter>, Box<dyn Content>>;
 
-impl<const UL: usize> UnsafeContentFactory for Box<dyn ContentFactory<UL>> {
-    fn create(self: Box<Self>, uniforms: Vec<BufferWriter>) -> Box<dyn Content> {
-        ContentFactory::<UL>::create(*self, uniforms.try_into().expect("valid size"))
+impl<const UL: usize> BoxedFunc<Vec<BufferWriter>, Box<dyn Content>> for ContentFactory<UL> {
+    fn apply(self: Box<Self>, uniforms: Vec<BufferWriter>) -> Box<dyn Content> {
+        (*self).apply(uniforms.try_into().expect("valid size"))
     }
 }
 
@@ -94,7 +90,7 @@ impl Uniforms {
 
         Self {
             variants: bg_variants,
-            content: content_factory.create(writers)
+            content: content_factory.apply(writers)
         }
     }
 
@@ -200,6 +196,10 @@ impl<T, B> Uniform<T, B> {
     fn write(&self) {
         (self.write)(&self.state);
     }
+
+    pub fn as_mut(&mut self) -> UniformMut<T, B> {
+        UniformMut { uniform: self }
+    }
 }
 
 impl<T, B> Deref for Uniform<T, B> {
@@ -208,12 +208,6 @@ impl<T, B> Deref for Uniform<T, B> {
     #[inline]
     fn deref(&self) -> &T {
         &self.state
-    }
-}
-
-impl<T, B> Uniform<T, B> {
-    pub fn as_mut(&mut self) -> UniformMut<T, B> {
-        UniformMut { uniform: self }
     }
 }
 

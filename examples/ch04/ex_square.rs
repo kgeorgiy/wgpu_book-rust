@@ -36,5 +36,5 @@ const VERTICES: &[Vertex] = &[
 ];
 
 fn main() {
-    run_example("Chapter 4. Square", VERTICES, None);
+    run_example("Chapter 4. Square", VERTICES.to_vec(), None);
 }

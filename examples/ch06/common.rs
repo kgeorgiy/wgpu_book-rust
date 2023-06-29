@@ -1,10 +1,11 @@
 use core::f32::consts::PI;
 use core::iter::zip;
 
-use cgmath::{InnerSpace, Matrix4, Point3, Rad, Vector3};
+use cgmath::{Angle, InnerSpace, Matrix4, Point3, Rad, Vector3};
 
-use webgpu_book::VertexBufferInfo;
-use crate::common::mvp::{MvpFactory, MvpMatrix};
+use webgpu_book::{PipelineConfiguration, VertexBufferInfo};
+use crate::common::mvp::MvpController;
+
 use crate::common::vertex_data::i8_as_f32;
 
 pub use self::global_common::*;
@@ -16,11 +17,12 @@ mod global_common;
 pub fn run_example<V: VertexBufferInfo>(
     title: &str,
     shader_source: &str,
-    vertices: &[V],
+    vertices: Vec<V>,
     topology: wgpu::PrimitiveTopology,
     indices: Option<&[u16]>,
 ) {
-    MvpFactory::<(), MvpMatrix>::example(()).into_config(shader_source)
+    PipelineConfiguration::new(shader_source)
+        .with(MvpController::example(()))
         .with_vertices_indices(vertices, indices)
         .with_topology(topology)
         .run_title(title);
@@ -50,12 +52,12 @@ impl Camera {
     }
 
     pub fn view(&self) -> Matrix4<f32> {
-        let pitch = self.pitch.0;
-        let yaw = self.yaw.0;
+        let (pitch_sin, pitch_cos) = self.pitch.sin_cos();
+        let (yaw_sin, yaw_cos) = self.yaw.sin_cos();
         Matrix4::look_to_rh(
             self.position,
-            Vector3::new(pitch.cos() * yaw.cos(), pitch.sin(), pitch.cos() * yaw.sin()).normalize(),
-            Vector3::unit_y()
+            Vector3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin).normalize(),
+            Vector3::unit_y(),
         )
     }
 }

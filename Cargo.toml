@@ -15,6 +15,9 @@ raw-window-handle = "0.5.2"
 wgpu = "0.16.1"
 winit = "0.28.6"
 
+[[example]]
+name = "ch00_hlists"
+path = "examples/ch00/ex_hlist.rs"
 
 [[example]]
 name = "ch01_test01"

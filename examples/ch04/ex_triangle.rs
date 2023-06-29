@@ -18,5 +18,5 @@ const VERTICES: [Vertex; 3] = [
 ];
 
 fn main() {
-    run_example("Chapter 4. Triangle", &VERTICES, None);
+    run_example("Chapter 4. Triangle", VERTICES.to_vec(), None);
 }

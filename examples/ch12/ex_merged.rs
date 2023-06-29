@@ -24,6 +24,6 @@ fn main() {
         )
         .collect();
 
-    example_models(&vertices, [Matrix4::identity()], true)
+    example_models(vertices, [Matrix4::identity()], true)
         .run_title("Chapter 12. Merged vertices");
 }

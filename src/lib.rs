@@ -1,3 +1,4 @@
+use boxed::FuncBox;
 pub use crate::bindings::TextureInfo;
 pub use crate::buffer::*;
 pub use crate::window_api::*;
@@ -5,6 +6,7 @@ pub use crate::uniforms::*;
 
 pub mod buffer;
 pub mod transforms;
+pub mod boxed;
 mod webgpu;
 pub mod window;
 mod window_api;
@@ -19,6 +21,7 @@ pub struct RenderConfiguration {
 }
 
 impl RenderConfiguration {
+    #[must_use]
     pub fn new(passes: Vec<RenderPassConfiguration>) -> Self {
         Self { render_passes: passes }
     }
@@ -41,6 +44,7 @@ impl RenderPassConfiguration {
         RenderConfiguration::new(vec![self]).run_title(title)
     }
 
+    #[must_use]
     pub fn new(pipelines: Vec<PipelineConfiguration>) -> Self {
         Self {
             pipelines,
@@ -49,12 +53,13 @@ impl RenderPassConfiguration {
         }
     }
 
+    #[must_use]
     pub fn with_load(mut self, load: wgpu::LoadOp<wgpu::Color>) -> Self {
         self.load = load;
         self
     }
 
-
+    #[must_use]
     pub fn with_depth(mut self, format: Option<wgpu::TextureFormat>) -> Self {
         self.depth = format.map(|frm| DepthConfiguration { format: frm });
         self
@@ -98,20 +103,24 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use] pub fn with_indexed_vertices<V, I>(mut self, vertices: &[V], indices: &[I])
+    #[must_use] pub fn with_indexed_vertices<V, I>(mut self, vertices: Vec<V>, indices: &[I])
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
-        self.vertices = vec![V::buffer("Vertices", vertices)];
         self.indices = Some(I::buffer("Indices", indices));
-        self.with_vertex_count(indices.len())
+        self
+            .with_vertices(vertices)
+            .with_vertex_count(indices.len())
     }
 
-    #[must_use] pub fn with_vertices<V: VertexBufferInfo>(mut self, vertices: &[V]) -> Self {
-        self.vertices = vec![V::buffer("Vertices", vertices)];
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
+    pub fn with_vertices<V: VertexBufferInfo>(mut self, vertices: Vec<V>) -> Self {
+        self.vertices = vec![V::buffer("Vertices", &vertices)];
         self.with_vertex_count(vertices.len())
     }
 
-    #[must_use] pub fn with_vertices_indices<V, I>(self, vertices: &[V], indices: Option<&[I]>)
+    #[must_use]
+    pub fn with_vertices_indices<V, I>(self, vertices: Vec<V>, indices: Option<&[I]>)
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
         match indices {
@@ -153,16 +162,16 @@ impl PipelineConfiguration {
     #[must_use] pub fn with_uniforms<const L: usize>(
         self,
         buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; L],
-        content_factory: Box<dyn ContentFactory<L>>
+        content_factory: ContentFactory<L>
     ) -> Self {
         self.with_multi_uniforms(buffers, content_factory, vec!([0; L]))
     }
 
-    #[must_use] pub fn with_multi_uniforms<const UL: usize>(
+    #[must_use] pub fn with_multi_uniforms<const L: usize>(
         mut self,
-        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; UL],
-        content_factory: Box<dyn ContentFactory<UL>>,
-        variants: Vec<[usize; UL]>
+        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; L],
+        content_factory: ContentFactory<L>,
+        variants: Vec<[usize; L]>
     ) -> Self {
         self.uniforms = Some(UniformsConfiguration::new(buffers, content_factory, variants));
         self
@@ -178,6 +187,10 @@ impl PipelineConfiguration {
         self
     }
 
+    #[must_use] pub fn with(self, configurator: Configurator<Self>) -> Self {
+        configurator.apply(self)
+    }
+
     pub fn run_title(self, title: &str) -> ! {
         RenderPassConfiguration::new(vec![self]).run_title(title);
     }
@@ -189,7 +202,9 @@ impl PipelineConfiguration {
 struct DepthConfiguration {
     format: wgpu::TextureFormat,
 }
+// pub struct FuncBox<T, R>(Box<dyn Any>, fn(Box<dyn Any>, T) -> R);
 
+pub type Configurator<T> = FuncBox<T, T>;
 
 
 pub fn run_wgpu(window_config: &WindowConfiguration, render_config: RenderConfiguration) -> ! {

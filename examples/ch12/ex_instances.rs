@@ -7,5 +7,5 @@ pub mod common;
 fn main() {
     let surface = Surface::read_args_surface();
     multi_pipeline(surface, true)
-        .run_title(format!("Chapter 12. Multiple instances ({})", surface.name).as_str());
+        .run_title(format!("Chapter 12. Multiple instances ({})", surface.name()).as_str());
 }

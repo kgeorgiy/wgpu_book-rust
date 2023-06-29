@@ -25,8 +25,8 @@ pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
     rotate_z * rotate_y * rotate_x
 }
 
-#[allow(clippy::module_name_repetitions)]
-#[must_use] pub fn create_transforms(
+#[must_use]
+pub fn create_transforms(
     translation: [f32; 3],
     rotation: [f32; 3],
     scaling: [f32; 3],

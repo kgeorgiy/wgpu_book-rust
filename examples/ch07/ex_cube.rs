@@ -1,8 +1,10 @@
-use crate::common::{Vertex, Wireframe};
+use common::surface_data::Mesh;
+use crate::common::mvp::AnimationState;
+use crate::common::Vertex;
 
 mod common;
 
-fn create_mesh() -> Wireframe {
+fn create_mesh() -> Mesh<Vertex> {
     let positions: [[f32; 3]; 8] = [
         [-1.0,  1.0,  1.0],
         [-1.0,  1.0, -1.0],
@@ -23,12 +25,12 @@ fn create_mesh() -> Wireframe {
         (0, 4), (1, 5), (2, 6), (3, 7),
     ];
     #[allow(clippy::indexing_slicing)]
-    Wireframe::from(lines.into_iter()
-        .map(|(f, t)| (Vertex::new(positions[f]), Vertex::new(positions[t])))
-        .collect::<Vec<_>>())
+    Mesh::from(lines.into_iter()
+        .map(|(f, t)| (Vertex::new(positions[f]), Vertex::new(positions[t]))))
 }
 
 fn main() {
-    let self1 = create_mesh();
-    self1.into_config().run_title("Chapter 7. Cube");
+    create_mesh().into_config()
+        .with(AnimationState::example())
+        .run_title("Chapter 7. Cube");
 }

@@ -14,5 +14,5 @@ fn create_vertices() -> Vec<VertexNT> {
 }
 
 fn main() {
-    run_example("Chapter 10. Cube", &create_vertices());
+    run_example("Chapter 10. Cube", create_vertices());
 }

@@ -1,13 +1,12 @@
 use core::f32::consts::PI;
 
-use bytemuck::Pod;
 use cgmath::Deg;
 use winit::event::{DeviceEvent, ElementState};
 
-use webgpu_book::{Content, To, transforms::create_rotation};
+use webgpu_book::{Content, PipelineConfiguration, transforms::create_rotation};
 
 use crate::common::{Camera, CameraController, create_vertices};
-use crate::common::mvp::{Mvp, MvpContent, MvpFactory, MvpMatrix};
+use crate::common::mvp::MvpController;
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 
 mod common;
@@ -37,7 +36,7 @@ impl CameraState {
     }
 }
 
-impl<B: Pod> Content for MvpContent<CameraState, B> where Mvp: To<B> {
+impl Content for MvpController<CameraState> {
     fn input(&mut self, event: &DeviceEvent) {
         self.state.input(event);
         self.set_view(self.state.camera.view());
@@ -47,12 +46,12 @@ impl<B: Pod> Content for MvpContent<CameraState, B> where Mvp: To<B> {
 fn main() {
     let model = create_rotation([PI / 8.0, PI / 8.0, PI / 8.0]);
     let camera = Camera::new((0.0, 0.0, -5.0), Deg(90.0), Deg(0.0));
-    MvpFactory::<CameraState, MvpMatrix>::new(model, camera.view(), Deg(120.0).into(), CameraState {
-        camera,
-        camera_controller: CameraController::new(0.005),
-        mouse_pressed: false,
-    })
-        .into_config(include_str!("cube_face_colors.wgsl"))
-        .with_vertices(&create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors))
+    PipelineConfiguration::new(include_str!("cube_face_colors.wgsl"))
+        .with(MvpController::from_model_view(model, camera.view(), Deg(90.0).into(), CameraState {
+            camera,
+            camera_controller: CameraController::new(0.005),
+            mouse_pressed: false,
+        }))
+        .with_vertices(create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors))
         .run_title("Chapter 6 Controlled camera");
 }

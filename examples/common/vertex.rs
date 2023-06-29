@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use bytemuck::{Pod, Zeroable};
 use cgmath::{InnerSpace, Matrix4, Point2, Point3, vec4, Vector3, Vector4};
 

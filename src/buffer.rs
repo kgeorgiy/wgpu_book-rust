@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use core::{any::TypeId, marker::PhantomData, mem::size_of};
 use std::rc::Rc;
 

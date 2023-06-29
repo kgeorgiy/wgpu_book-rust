@@ -1,14 +1,17 @@
-#![allow(clippy::module_name_repetitions, clippy::indexing_slicing)]
+#![allow(clippy::indexing_slicing)]
 
 use core::f32::consts::PI;
 use core::iter::zip;
 
 use cgmath::{ElementWise, InnerSpace, Point3, point3};
 
+use webgpu_book::{Configurator, func_box, PipelineConfiguration, VertexBufferInfo};
+use webgpu_book::boxed::FuncBox;
+
+use super::{Vertex, VertexN, VertexC, VertexNCT};
 use super::CmdArgs;
 use super::colormap::{Colormap, ColormapInterpolator};
 use super::functions::{breather, klein_bottle, peaks, seashell, sievert_enneper, sinc, sphere, torus, wellenkugel};
-use super::{VertexC, VertexNCT};
 
 fn normalize_point(
     point: &Point3<f32>,
@@ -145,8 +148,15 @@ impl SurfaceData {
 }
 
 pub struct Surface<'a> {
-    pub name: &'a str,
+    pub(crate) name: &'a str,
     data: fn() -> SurfaceData
+}
+
+impl<'a> Surface<'a> {
+    #[must_use]
+    pub fn name(&self) -> &'a str {
+        self.name
+    }
 }
 
 impl Surface<'static> {
@@ -228,5 +238,58 @@ impl<'a> Surface<'a> {
             VertexC::new((0.0, 0.0, -scale.z), (0.0, 0.0, 0.5)),
             VertexC::new((0.0, 0.0,  scale.z), (0.5, 0.5, 1.0)),
         ]
+    }
+}
+
+
+// Mesh
+
+pub struct Mesh<V> {
+    edges: Vec<(V, V)>,
+}
+
+impl<V: VertexBufferInfo> Mesh<V> {
+    fn conf_shader(self, shader_source: &str) -> Configurator<PipelineConfiguration> {
+        let shader_string = shader_source.to_owned();
+        func_box!(move |config: PipelineConfiguration| config
+            .with_shader(shader_string.as_str())
+            .with_vertices(self.into())
+            .with_topology(wgpu::PrimitiveTopology::LineList))
+    }
+}
+
+impl<V: VertexBufferInfo> From<Mesh<V>> for Vec<V> {
+    fn from(mesh: Mesh<V>) -> Self {
+        mesh.edges.into_iter().flat_map(|(b, e)| [b, e]).collect()
+    }
+}
+
+impl<V: VertexBufferInfo, T: Iterator<Item=(V, V)>> From<T> for Mesh<V> {
+    fn from(edges: T) -> Self {
+        Mesh { edges: edges.collect() }
+    }
+}
+
+impl Mesh<Vertex> {
+    #[must_use]
+    pub fn into_config(self) -> PipelineConfiguration {
+        PipelineConfiguration::new("").with(self.conf())
+    }
+
+    #[must_use]
+    pub fn conf(self) -> Configurator<PipelineConfiguration> {
+        self.conf_shader(include_str!("../ch06/line3d.wgsl"))
+    }
+}
+
+impl Mesh<VertexN> {
+    #[must_use]
+    pub fn into_config(self) -> PipelineConfiguration {
+        PipelineConfiguration::new("").with(self.conf())
+    }
+
+    #[must_use]
+    pub fn conf(self) -> Configurator<PipelineConfiguration> {
+        self.conf_shader(include_str!("wireframe.wgsl"))
     }
 }

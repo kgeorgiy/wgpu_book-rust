@@ -71,5 +71,5 @@ fn outer(p: Point3<f32>, center: Point3<f32>) -> VertexN {
 }
 
 fn main() {
-    LightAux::example(&cylinder_vertices(0.5, 1.5, 1.5, 30)).run_title("Chapter 8. Cylinder");
+    LightAux::example(cylinder_vertices(0.5, 1.5, 1.5, 30)).run_title("Chapter 8. Cylinder");
 }

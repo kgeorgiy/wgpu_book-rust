@@ -15,7 +15,7 @@ fn main() {
     run_example(
         "Chapter 6 Line",
         include_str!("line3d.wgsl"),
-        &create_vertices(),
+        create_vertices(),
         wgpu::PrimitiveTopology::LineStrip,
         None,
     );

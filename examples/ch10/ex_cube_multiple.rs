@@ -13,5 +13,5 @@ fn create_vertices() -> Vec<VertexNT> {
 }
 
 fn main() {
-    run_example("Chapter 10. Multi-textured cube", &create_vertices());
+    run_example("Chapter 10. Multi-textured cube", create_vertices());
 }

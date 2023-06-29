@@ -29,5 +29,5 @@ fn main() {
     }
 
 
-    common::run_example("Chapter 4. Hexagon (indexed)", &vertices, Some(&indices));
+    common::run_example("Chapter 4. Hexagon (indexed)", vertices, Some(&indices));
 }
