@@ -4,6 +4,7 @@ use image::{io::Reader as ImageReader, RgbaImage};
 use crate::usize_as_u32;
 use crate::webgpu::WebGPUDevice;
 
+//
 // Binding
 
 #[derive(Clone, Debug)]
@@ -13,7 +14,7 @@ pub(crate) struct Binding<'a> {
     pub(crate) resources: Vec<wgpu::BindingResource<'a>>,
 }
 
-
+//
 // BindGroupVariants
 
 pub(crate) struct BindGroupVariants {
@@ -48,12 +49,11 @@ impl BindGroupVariants {
             .map(|(no, variant)| wg.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some(format!("{label} Bing Group, variant {no}").as_str()),
                 layout: &layout,
-                entries: &variant.into_iter().zip(bindings.iter())
-                    .map(|(index, binds)| binds.resources[index].clone())
+                entries: &bindings.iter()
                     .enumerate()
-                    .map(|(index, resource)| wgpu::BindGroupEntry {
+                    .map(|(index, binding)| wgpu::BindGroupEntry {
                         binding: usize_as_u32(index),
-                        resource
+                        resource: binding.resources[*variant.get(index).unwrap_or(&0)].clone()
                     })
                     .collect::<Vec<_>>(),
             })).collect();
@@ -62,7 +62,7 @@ impl BindGroupVariants {
     }
 }
 
-
+//
 // TextureInfo
 
 pub struct TextureInfo {
@@ -132,7 +132,7 @@ impl TextureInfo {
     }
 }
 
-
+//
 // Texture
 
 pub struct Texture {
@@ -162,7 +162,7 @@ impl Texture {
     }
 }
 
-
+//
 // Textures
 
 pub(crate) struct Textures {

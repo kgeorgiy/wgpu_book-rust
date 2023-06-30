@@ -2,7 +2,7 @@ use core::time::Duration;
 
 use cgmath::{Deg, Matrix4, Point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Configurator, Content, func_box, PipelineConfiguration, To, typed_box, Uniform};
+use webgpu_book::{Configurator, Content, PipelineConfiguration, To, typed_box, Uniform};
 use webgpu_book::boxed::FuncBox;
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
 
@@ -52,17 +52,11 @@ impl<T: 'static> MvpController<T> where MvpController<T>: Content {
     pub fn from_model_view(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T)
         -> Configurator<PipelineConfiguration>
     {
-        let mvp = Mvp { model, view, projection: create_projection(1.0, fovy) };
-        func_box!(move |config: PipelineConfiguration| config
-            .with_uniforms(
-                [<[[f32; 4]; 4]>::buffer("Uniform", &[mvp.to()])],
-                func_box!(
-                    move |[mvp_buffer]: [BufferWriter; 1]| typed_box!(dyn Content, MvpController {
-                        mvp: mvp_buffer.to_value(mvp), fovy, state,
-                    })
-                ),
-            )
-        )
+        FuncBox::FnOnce(Box::new(move |mut config: PipelineConfiguration| {
+            let mvp_s = Mvp { model, view, projection: create_projection(1.0, fovy) };
+            let mvp: Uniform<Mvp> = config.uniforms().add("Mvp", mvp_s, wgpu::ShaderStages::VERTEX).value();
+            config.listener(typed_box!(dyn Content, MvpController { mvp, fovy, state }))
+        }))
     }
 
     #[must_use]

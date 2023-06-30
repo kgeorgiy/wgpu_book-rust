@@ -1,8 +1,9 @@
 use boxed::FuncBox;
+
 pub use crate::bindings::TextureInfo;
 pub use crate::buffer::*;
-pub use crate::window_api::*;
 pub use crate::uniforms::*;
+pub use crate::window_api::*;
 
 pub mod buffer;
 pub mod transforms;
@@ -13,7 +14,7 @@ mod window_api;
 mod bindings;
 mod uniforms;
 
-
+//
 // RenderConfiguration
 
 pub struct RenderConfiguration {
@@ -31,6 +32,7 @@ impl RenderConfiguration {
     }
 }
 
+//
 // RenderPassConfiguration
 
 pub struct RenderPassConfiguration {
@@ -66,7 +68,7 @@ impl RenderPassConfiguration {
     }
 }
 
-
+//
 // PipelineConfiguration
 
 pub struct PipelineConfiguration {
@@ -77,9 +79,9 @@ pub struct PipelineConfiguration {
     strip_index_format: Option<wgpu::IndexFormat>,
     vertices: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
     indices: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
-    uniforms: Option<UniformsConfiguration>,
+    uniforms: UniformsConfiguration,
+    listeners: Vec<Box<dyn Content>>,
     textures: Vec<TextureInfo>,
-    instances: usize,
 }
 
 impl PipelineConfiguration {
@@ -91,10 +93,10 @@ impl PipelineConfiguration {
             cull_mode: Some(wgpu::Face::Back),
             strip_index_format: None,
             vertices: vec![],
+            listeners: vec![],
             indices: None,
-            uniforms: None,
+            uniforms: UniformsConfiguration::default(),
             textures: vec![],
-            instances: 1,
         }
     }
 
@@ -154,37 +156,28 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use] pub fn with_cull_mode(mut self, cull_mode: Option<wgpu::Face>) -> Self {
+    #[must_use]
+    pub fn with_cull_mode(mut self, cull_mode: Option<wgpu::Face>) -> Self {
         self.cull_mode = cull_mode;
         self
     }
 
-    #[must_use] pub fn with_uniforms<const L: usize>(
-        self,
-        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; L],
-        content_factory: ContentFactory<L>
-    ) -> Self {
-        self.with_multi_uniforms(buffers, content_factory, vec!([0; L]))
-    }
-
-    #[must_use] pub fn with_multi_uniforms<const L: usize>(
-        mut self,
-        buffers: [SmartBufferDescriptor<wgpu::ShaderStages>; L],
-        content_factory: ContentFactory<L>,
-        variants: Vec<[usize; L]>
-    ) -> Self {
-        self.uniforms = Some(UniformsConfiguration::new(buffers, content_factory, variants));
+    #[must_use]
+    pub fn listener(mut self, listener: Box<dyn Content>) -> Self {
+        self.listeners.push(listener);
         self
     }
 
-    #[must_use] pub fn with_instances(mut self, instances: usize) -> Self {
-        self.instances = instances;
-        self
-    }
 
-    #[must_use] pub fn with_vertex_count(mut self, vertices: usize) -> Self {
+    #[must_use]
+    pub fn with_vertex_count(mut self, vertices: usize) -> Self {
         self.vertex_count = vertices;
         self
+    }
+
+    #[must_use]
+    pub fn uniforms(&mut self) -> &mut UniformsConfiguration {
+        &mut self.uniforms
     }
 
     #[must_use] pub fn with(self, configurator: Configurator<Self>) -> Self {
@@ -196,13 +189,12 @@ impl PipelineConfiguration {
     }
 }
 
-
+//
 // DepthConfiguration
 
 struct DepthConfiguration {
     format: wgpu::TextureFormat,
 }
-// pub struct FuncBox<T, R>(Box<dyn Any>, fn(Box<dyn Any>, T) -> R);
 
 pub type Configurator<T> = FuncBox<T, T>;
 

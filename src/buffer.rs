@@ -1,10 +1,9 @@
-use core::{any::TypeId, marker::PhantomData, mem::size_of};
+use core::{any::TypeId, mem::size_of};
 use std::rc::Rc;
 
 use bytemuck::{cast_slice, Pod};
 use wgpu::{BindingResource, Buffer, BufferAddress, BufferBinding, BufferSize, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
-use crate::{To, Uniform};
 
 use crate::webgpu::WebGPUDevice;
 
@@ -13,7 +12,7 @@ use crate::webgpu::WebGPUDevice;
 #[derive(Clone, Debug)]
 pub(crate) struct BufferLayout {
     type_id: TypeId,
-    pub(crate) item_count: usize,
+    item_count: usize,
     item_size: usize,
     item_alignment: usize,
 }
@@ -22,16 +21,16 @@ pub(crate) struct BufferLayout {
 // SmartBuffer
 
 pub(crate) struct SmartBuffer<F> {
-    pub(crate) buffer: Buffer,
+    pub(crate) buffer: Rc<Buffer>,
     pub(crate) format: F,
     pub(crate) layout: BufferLayout,
 }
 
 impl<F> SmartBuffer<F> {
-    pub(crate) fn writer(self, queue: Rc<Queue>) -> BufferWriter {
+    pub(crate) fn writer(&self, queue: Rc<Queue>) -> BufferWriter {
         BufferWriter {
-            buffer: self.buffer,
-            layout: self.layout,
+            buffer: self.buffer.clone(),
+            layout: self.layout.clone(),
             queue,
         }
     }
@@ -51,18 +50,13 @@ impl<F> SmartBuffer<F> {
 // BufferWriter
 
 #[derive(Debug)]
-pub struct BufferWriter {
+pub(crate) struct BufferWriter {
     queue: Rc<Queue>,
-    pub(crate) buffer: Buffer,
+    buffer: Rc<Buffer>,
     layout: BufferLayout,
 }
 
 impl BufferWriter {
-    pub fn to_typed<T: 'static>(self) -> TypedBufferWriter<T> {
-        self.check_type::<T>();
-        TypedBufferWriter { untyped: self, phantom: PhantomData::default() }
-    }
-
     pub fn check_type<T: 'static>(&self) {
         assert_eq!(self.layout.type_id, TypeId::of::<T>(), "Invalid buffer type");
     }
@@ -72,41 +66,9 @@ impl BufferWriter {
         assert_eq!(self.layout.item_count, slice.len(), "Invalid slice length");
         self.queue.write_buffer(&self.buffer, 0, cast_slice(slice));
     }
-
-    pub fn to_value<T, B>(self, state: T) -> Uniform<T> where T: To<B>, B: 'static + Pod {
-        Uniform::value(state, self)
-    }
-
-    pub fn to_instance_array<T, const L: usize, B>(self, state: [T; L])
-        -> Uniform<[T; L]> where T: To<B> + Clone, B: 'static + Pod
-    {
-        Uniform::instance_array(state, self)
-    }
-
-    pub fn to_binding_array<T, const L: usize, B>(self, state: [T; L])
-        -> Uniform<[T; L]> where T: To<B>, B: 'static + Pod
-    {
-        Uniform::binding_array(state, self)
-    }
 }
 
-// TypedBufferWriter
-
-pub struct TypedBufferWriter<T> {
-    untyped: BufferWriter,
-    phantom: PhantomData<T>,
-}
-
-impl<T: Pod> TypedBufferWriter<T> {
-    pub fn write_slice(&self, slice: &[T]) {
-        self.untyped.write_slice(slice);
-    }
-
-    pub fn write(&self, value: T) {
-        self.write_slice(&[value]);
-    }
-}
-
+//
 // SmartBufferDescriptor
 
 pub struct SmartBufferDescriptor<F> {
@@ -134,11 +96,11 @@ impl<'a, F> SmartBufferDescriptor<F> {
     }
 
     pub(crate) fn create_buffer(self, wg: &WebGPUDevice) -> SmartBuffer<F> {
-        let buffer = wg.device.create_buffer_init(&BufferInitDescriptor {
+        let buffer = Rc::new(wg.device.create_buffer_init(&BufferInitDescriptor {
             label: Some(self.label.as_str()),
             contents: &self.contents,
             usage: self.usage,
-        });
+        }));
         SmartBuffer { buffer, format: self.format, layout: self.layout }
     }
 }

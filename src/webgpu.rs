@@ -1,9 +1,9 @@
-use std::rc::Rc;
 use core::time::Duration;
+use std::rc::Rc;
 
 use anyhow::Result;
 
-use crate::{CompositeContent, Content, RawWindow, PipelineConfiguration, SmartBuffer, usize_as_u32, RenderPassConfiguration, RenderConfiguration};
+use crate::{CompositeContent, Content, PipelineConfiguration, RawWindow, RenderConfiguration, RenderPassConfiguration, SmartBuffer, usize_as_u32};
 use crate::bindings::Textures;
 use crate::uniforms::Uniforms;
 
@@ -62,7 +62,7 @@ impl WebGPUDevice {
     }
 }
 
-
+//
 // WegGPUContent
 
 pub(crate) struct WebGPURender {
@@ -80,9 +80,6 @@ impl WebGPURender {
         render_conf: RenderConfiguration,
     ) -> Result<Box<dyn Content + 'a>> {
         let wg = WebGPUDevice::new(window).await;
-
-        // render_conf.passes.into_iter()
-        //     .map(|conf| )
 
         let (render_passes, contents_2d): (Vec<RenderPass>, Vec<Vec<Box<dyn Content>>>) =
             render_conf.render_passes.into_iter()
@@ -125,7 +122,8 @@ impl Content for WebGPURender {
     }
 }
 
-// Pipeline
+//
+// RenderPass
 
 struct RenderPass {
     pipelines: Vec<Pipeline>,
@@ -138,15 +136,19 @@ impl RenderPass {
         -> Result<(RenderPass, Vec<Box<dyn Content>>)>
     {
         let depth = conf.depth.map(|depth_conf| Depth { format: depth_conf.format });
-        let (pipelines, contents) = conf.pipelines.into_iter()
-            .map(|pipeline| Pipeline::new(
-                pipeline,
-                wg,
-                depth.as_ref().map(Depth::stencil)
-            ))
-            .collect::<Result<Vec<_>>>()?
-            .into_iter().unzip();
-        Ok((RenderPass { pipelines, load: conf.load, depth }, contents))
+        let (pipelines, listeners): (Vec<Pipeline>, Vec<Vec<Box<dyn Content>>>) =
+            conf.pipelines.into_iter()
+                .map(|pipeline| Pipeline::new(
+                    pipeline,
+                    wg,
+                    depth.as_ref().map(Depth::stencil),
+                ))
+                .collect::<Result<Vec<_>>>()?
+                .into_iter().unzip();
+        Ok((
+            RenderPass { pipelines, load: conf.load, depth },
+            listeners.into_iter().flatten().collect(),
+        ))
     }
 
     pub(crate) fn render(
@@ -226,13 +228,13 @@ impl RuntimeDepth {
     }
 }
 
-
+//
 // Pipeline
 
 struct Pipeline {
     pipeline: wgpu::RenderPipeline,
     vertices: u32,
-    vertex_buffers: Vec<wgpu::Buffer>,
+    vertex_buffers: Vec<Rc<wgpu::Buffer>>,
     index_buffer: Option<SmartBuffer<wgpu::IndexFormat>>,
     uniform_groups: Vec<wgpu::BindGroup>,
     textures_groups: Vec<wgpu::BindGroup>,
@@ -244,14 +246,15 @@ impl Pipeline {
         conf: PipelineConfiguration,
         wg: &WebGPUDevice,
         depth_stencil: Option<wgpu::DepthStencilState>
-    ) -> Result<(Pipeline, Box<dyn Content>)> {
+    ) -> Result<(Pipeline, Vec<Box<dyn Content>>)> {
         let vertex_buffers = conf.vertices.into_iter()
             .map(|descriptor| descriptor.create_buffer(wg))
             .collect::<Vec<_>>();
         let index_buffer = conf.indices
             .map(|descriptor| descriptor.create_buffer(wg));
-        let uniforms = Uniforms::new(wg, conf.uniforms);
         let textures = Textures::new(wg, &conf.textures)?;
+
+        let uniforms = Uniforms::new(conf.uniforms, wg);
 
         let render_pipeline = Self::create_pipeline(
             &wg.device,
@@ -279,9 +282,9 @@ impl Pipeline {
             index_buffer,
             uniform_groups: uniforms.variants.groups,
             textures_groups: textures.variants.groups,
-            instances: usize_as_u32(conf.instances)
+            instances: usize_as_u32(uniforms.instances)
         };
-        Ok((pipeline, uniforms.content))
+        Ok((pipeline, conf.listeners))
     }
 
     fn create_pipeline<'a>(

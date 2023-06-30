@@ -6,7 +6,7 @@ use core::time::Duration;
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Angle, EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{BufferInfo, BufferWriter, Configurator, Content, func_box, PipelineConfiguration, To, typed_box, Uniform, UniformArray, VertexBufferInfo};
+use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, Uniform, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
 use webgpu_book::transforms::{create_projection, create_rotation};
 
@@ -195,52 +195,51 @@ impl LightExamples {
         light: LightUniforms<LA>,
         animation_speed: f32
     ) -> FuncBox<PipelineConfiguration, PipelineConfiguration> {
+        func_box!(move |pipeline: PipelineConfiguration| {
+            Self::configure(pipeline, models, instances, camera, light, animation_speed)
+        })
+    }
+
+    fn configure<const ML: usize, LA: Pod>(
+        mut pipeline: PipelineConfiguration,
+        models: [Model; ML],
+        instances: bool,
+        camera: OglCamera,
+        light: LightUniforms<LA>,
+        animation_speed: f32,
+    ) -> PipelineConfiguration {
         let side = camera.look_at.cross(camera.up);
         let fragment = FragmentUniforms::new(
             camera.eye.to_homogeneous().into(),
             (side.normalize() - camera.look_at.normalize() * 2.0).extend(0.0).into()
         );
 
-        func_box!(move |mut conf: PipelineConfiguration| {
-            let camera_u: CameraUniform = camera.to();
-            let models_u: UniformArray<ModelUniforms, ML> = models.to();
+        let uniforms = pipeline.uniforms();
+        let models_u = if instances {
+            uniforms.instances(ML);
+            uniforms.add("Models", models, wgpu::ShaderStages::VERTEX)
+                .instance_array::<ModelUniforms>()
+        } else {
+            uniforms.variants((0..ML).map(|i| vec![i]).collect());
+            uniforms.add("Models", models, wgpu::ShaderStages::VERTEX)
+                .bindings_array::<ModelUniforms>()
+        };
 
-            let camera_buffer = BufferInfo::buffer_format("Camera uniform", &[camera_u.to()], wgpu::ShaderStages::VERTEX);
-            let fragment_buffer = BufferInfo::buffer_format("Fragment uniform", &[fragment.to()], wgpu::ShaderStages::FRAGMENT);
-            let light_buffer = BufferInfo::buffer_format("Light uniform", &[light.to()], wgpu::ShaderStages::FRAGMENT);
+        let camera_u = uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX)
+            .value::<CameraUniform>();
+        let fragment_u = uniforms.add("Fragment", fragment, wgpu::ShaderStages::FRAGMENT)
+            .value::<FragmentUniforms>();
+        let light_u = uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
+            .value::<LightUniforms<LA>>();
 
-            let factory = func_box!(move |[models_writer, camera_writer, fragment_writer, light_writer]: [BufferWriter; 4]| {
-                typed_box!(dyn Content, Uniforms {
-                    models:
-                        if instances {
-                            models_writer.to_instance_array::<Model, ML, ModelUniforms>(models)
-                        } else {
-                            models_writer.to_binding_array::<Model, ML, ModelUniforms>(models)
-                        },
-                    camera: camera_writer.to_value::<OglCamera, CameraUniform>(camera),
-                    fragment: fragment_writer.to_value::<FragmentUniforms, FragmentUniforms>(fragment),
-                    light: light_writer.to_value::<LightUniforms<LA>, LightUniforms<LA>>(light),
+        pipeline.listener(Box::new(Uniforms {
+            models: models_u,
+            camera: camera_u,
+            fragment: fragment_u,
+            light: light_u,
 
-                    animation_speed,
-                })
-            });
-
-            if instances {
-                conf = conf.with_instances(ML);
-                let model_buffer = BufferInfo::buffer_format("Models uniform", &models_u.as_instances(), wgpu::ShaderStages::VERTEX);
-                conf.with_uniforms(
-                    [model_buffer, camera_buffer, fragment_buffer, light_buffer],
-                    factory,
-                )
-            } else {
-                let model_buffer = BufferInfo::buffer_format("Models uniform", models_u.as_bindings(), wgpu::ShaderStages::VERTEX);
-                conf.with_multi_uniforms(
-                    [model_buffer, camera_buffer, fragment_buffer, light_buffer],
-                    factory,
-                    (0..ML).map(|i| [i, 0, 0, 0]).collect()
-                )
-            }
-        })
+            animation_speed,
+        }))
     }
 
     #[must_use]
