@@ -213,13 +213,13 @@ impl LightExamples {
                 typed_box!(dyn Content, Uniforms {
                     models:
                         if instances {
-                            models_writer.to_instance_array(models)
+                            models_writer.to_instance_array::<Model, ML, ModelUniforms>(models)
                         } else {
-                            models_writer.to_binding_array(models)
+                            models_writer.to_binding_array::<Model, ML, ModelUniforms>(models)
                         },
-                    camera: camera_writer.to_value(camera),
-                    fragment: fragment_writer.to_value(fragment),
-                    light: light_writer.to_value(light),
+                    camera: camera_writer.to_value::<OglCamera, CameraUniform>(camera),
+                    fragment: fragment_writer.to_value::<FragmentUniforms, FragmentUniforms>(fragment),
+                    light: light_writer.to_value::<LightUniforms<LA>, LightUniforms<LA>>(light),
 
                     animation_speed,
                 })
@@ -237,7 +237,7 @@ impl LightExamples {
                 conf.with_multi_uniforms(
                     [model_buffer, camera_buffer, fragment_buffer, light_buffer],
                     factory,
-                    (0..ML).map(|i| [i, 0, 0, 0, ]).collect()
+                    (0..ML).map(|i| [i, 0, 0, 0]).collect()
                 )
             }
         })
@@ -262,10 +262,10 @@ impl LightExamples {
 
 #[allow(dead_code)]
 pub struct Uniforms<const ML: usize, LA: Pod> {
-    models: Uniform<[Model; ML], ModelUniforms>,
-    camera: Uniform<OglCamera, CameraUniform>,
-    fragment: Uniform<FragmentUniforms, FragmentUniforms>,
-    light: Uniform<LightUniforms<LA>, LightUniforms<LA>>,
+    models: Uniform<[Model; ML]>,
+    camera: Uniform<OglCamera>,
+    fragment: Uniform<FragmentUniforms>,
+    light: Uniform<LightUniforms<LA>>,
 
     animation_speed: f32,
 }

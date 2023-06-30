@@ -1,4 +1,3 @@
-use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 
 use bytemuck::Pod;
@@ -153,25 +152,24 @@ impl<T, B, const L: usize> To<UniformArray<B, L>> for [T; L] where B: Pod, T: To
 
 // Uniform and UniformState
 
-pub struct Uniform<T, B> {
+pub struct Uniform<T> {
     state: T,
     write: Box<dyn Fn(&T)>,
-    phantom: PhantomData<B>,
 }
 
-impl<T, B> Uniform<T, B> {
+impl<T> Uniform<T> {
     pub fn new(state: T, write: Box<dyn Fn(&T)>) -> Self {
-        Self { state, write, phantom: PhantomData::default() }
+        Self { state, write }
     }
 
-    pub(crate) fn value(state: T, buffer: BufferWriter) -> Self where B: 'static + Pod, T: To<B> {
+    pub(crate) fn value<B>(state: T, buffer: BufferWriter) -> Self where B: 'static + Pod, T: To<B> {
         let typed_buffer: TypedBufferWriter<B> = buffer.to_typed();
         Self::new(state, Box::new(move |value| typed_buffer.write_slice(&[value.to()])))
     }
 }
 
-impl<T, B, const L: usize> Uniform<[T; L], B> {
-    pub(crate) fn instance_array(state: [T; L], buffer: BufferWriter)
+impl<T, const L: usize> Uniform<[T; L]> {
+    pub(crate) fn instance_array<B>(state: [T; L], buffer: BufferWriter)
         -> Self where B: Pod, T: To<B> + Clone
     {
         let tb: TypedBufferWriter<[B; L]> = buffer.to_typed();
@@ -181,7 +179,7 @@ impl<T, B, const L: usize> Uniform<[T; L], B> {
         )
     }
 
-    pub(crate) fn binding_array(state: [T; L], buffer: BufferWriter)
+    pub(crate) fn binding_array<B>(state: [T; L], buffer: BufferWriter)
         -> Self where B: Pod, T: To<B>
     {
         let tb: TypedBufferWriter<B> = buffer.to_typed();
@@ -192,17 +190,17 @@ impl<T, B, const L: usize> Uniform<[T; L], B> {
     }
 }
 
-impl<T, B> Uniform<T, B> {
+impl<T> Uniform<T> {
     fn write(&self) {
         (self.write)(&self.state);
     }
 
-    pub fn as_mut(&mut self) -> UniformMut<T, B> {
+    pub fn as_mut(&mut self) -> UniformMut<T> {
         UniformMut { uniform: self }
     }
 }
 
-impl<T, B> Deref for Uniform<T, B> {
+impl<T> Deref for Uniform<T> {
     type Target = T;
 
     #[inline]
@@ -211,17 +209,17 @@ impl<T, B> Deref for Uniform<T, B> {
     }
 }
 
-pub struct UniformMut<'a, T, B> {
-    uniform: &'a mut Uniform<T, B>,
+pub struct UniformMut<'a, T> {
+    uniform: &'a mut Uniform<T>,
 }
 
-impl<T, B> Drop for UniformMut<'_, T, B> {
+impl<T> Drop for UniformMut<'_, T> {
     fn drop(&mut self) {
         self.uniform.write();
     }
 }
 
-impl<T, B> Deref for UniformMut<'_, T, B> {
+impl<T> Deref for UniformMut<'_, T> {
     type Target = T;
 
     #[inline]
@@ -230,7 +228,7 @@ impl<T, B> Deref for UniformMut<'_, T, B> {
     }
 }
 
-impl<T, B> DerefMut for UniformMut<'_, T, B> {
+impl<T> DerefMut for UniformMut<'_, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
         &mut self.uniform.state

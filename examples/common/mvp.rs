@@ -25,7 +25,7 @@ impl To<[[f32; 4]; 4]> for Mvp {
 // MvpController
 
 pub struct MvpController<T> {
-    mvp: Uniform<Mvp, [[f32; 4]; 4]>,
+    mvp: Uniform<Mvp>,
     fovy: Rad<f32>,
     pub(crate) state: T,
 }

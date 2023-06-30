@@ -73,18 +73,18 @@ impl BufferWriter {
         self.queue.write_buffer(&self.buffer, 0, cast_slice(slice));
     }
 
-    pub fn to_value<T, B>(self, state: T) -> Uniform<T, B> where T: To<B>, B: 'static + Pod {
+    pub fn to_value<T, B>(self, state: T) -> Uniform<T> where T: To<B>, B: 'static + Pod {
         Uniform::value(state, self)
     }
 
-    pub fn to_instance_array<T, B, const L: usize>(self, state: [T; L])
-        -> Uniform<[T; L], B> where T: To<B> + Clone, B: 'static + Pod
+    pub fn to_instance_array<T, const L: usize, B>(self, state: [T; L])
+        -> Uniform<[T; L]> where T: To<B> + Clone, B: 'static + Pod
     {
         Uniform::instance_array(state, self)
     }
 
-    pub fn to_binding_array<T, B, const L: usize>(self, state: [T; L])
-        -> Uniform<[T; L], B> where T: To<B>, B: 'static + Pod
+    pub fn to_binding_array<T, const L: usize, B>(self, state: [T; L])
+        -> Uniform<[T; L]> where T: To<B>, B: 'static + Pod
     {
         Uniform::binding_array(state, self)
     }
