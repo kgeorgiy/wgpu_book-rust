@@ -1,4 +1,4 @@
-use core::{any::TypeId, mem::size_of};
+use core::{any::TypeId, mem::size_of, fmt::Debug};
 use std::rc::Rc;
 
 use bytemuck::{cast_slice, Pod};
@@ -145,7 +145,7 @@ impl<T: Pod> BufferInfo<ShaderStages> for T {
 
 // VertexBufferInfo
 
-pub trait VertexBufferInfo where Self: Pod {
+pub trait VertexBufferInfo where Self: Pod + Debug {
     const ATTRIBUTES: &'static [VertexAttribute];
 }
 

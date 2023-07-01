@@ -1,10 +1,10 @@
-use common::surface_data::Mesh;
+use common::surface_data::Edges;
 use crate::common::mvp::AnimationState;
 use crate::common::Vertex;
 
 mod common;
 
-fn create_mesh() -> Mesh<Vertex> {
+fn create_mesh() -> Edges<Vertex> {
     let positions: [[f32; 3]; 8] = [
         [-1.0,  1.0,  1.0],
         [-1.0,  1.0, -1.0],
@@ -25,8 +25,8 @@ fn create_mesh() -> Mesh<Vertex> {
         (0, 4), (1, 5), (2, 6), (3, 7),
     ];
     #[allow(clippy::indexing_slicing)]
-    Mesh::from(lines.into_iter()
-        .map(|(f, t)| (Vertex::new(positions[f]), Vertex::new(positions[t]))))
+    Edges::from(lines.into_iter()
+        .map(|(f, t)| [Vertex::new(positions[f]), Vertex::new(positions[t])]))
 }
 
 fn main() {

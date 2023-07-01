@@ -5,6 +5,7 @@ use cgmath::{Angle, InnerSpace, Matrix4, Point3, Rad, Vector3};
 
 use webgpu_book::{PipelineConfiguration, VertexBufferInfo};
 use crate::common::mvp::MvpController;
+use crate::common::surface_data::Quads;
 
 use crate::common::vertex_data::i8_as_f32;
 
@@ -98,11 +99,13 @@ impl CameraController {
     }
 }
 
+//
 // Other
 
-#[allow(dead_code)]
-pub fn create_vertices<const L: usize>(positions: [[i8; 3]; L], colors: [[i8; 3]; L]) -> Vec<VertexC> {
+#[allow(dead_code, clippy::indexing_slicing)]
+pub fn create_cube<const L: usize>(positions: [[[i8; 3]; 4]; L], colors: [[[i8; 3]; 4]; L]) -> Quads<VertexC> {
     zip(i8_as_f32(positions), i8_as_f32(colors))
-        .map(|(pos, col)| VertexC::new(pos, col))
-        .collect()
+        .map(|(pos, cols)|
+            [0, 1, 2, 3].map(|i| VertexC::new(pos[i], cols[i])))
+        .into()
 }

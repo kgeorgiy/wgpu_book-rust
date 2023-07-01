@@ -10,7 +10,8 @@ use webgpu_book::boxed::FuncBox;
 use webgpu_book::transforms::{create_projection, create_rotation};
 
 use super::{CmdArgs, VertexN};
-use super::surface_data::Mesh;
+use super::surface_data::Edges;
+use super::surface_data::Triangles;
 
 // Camera
 
@@ -34,12 +35,13 @@ impl OglCamera {
         Matrix4::look_to_rh(self.eye, self.look_at - self.eye, self.up)
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) -> Matrix4<f32> {
-        self.projection = create_projection(width as f32 / height as f32, self.fovy);
+    #[must_use]
+    pub fn projection(&self) -> Matrix4<f32> {
         self.projection
     }
 
-    pub fn projection(&self) -> Matrix4<f32> {
+    pub fn resize(&mut self, width: u32, height: u32) -> Matrix4<f32> {
+        self.projection = create_projection(width as f32 / height as f32, self.fovy);
         self.projection
     }
 }
@@ -155,37 +157,35 @@ impl To<CameraUniform> for OglCamera {
 pub struct LightExamples;
 
 impl LightExamples {
-    #[must_use]
-    pub fn read_args_wireframe<V: VertexBufferInfo + Into<VertexN>>(vertices: Vec<V>) -> FuncBox<PipelineConfiguration, PipelineConfiguration> {
+    pub fn read_args_wireframe<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>) -> FuncBox<PipelineConfiguration, PipelineConfiguration> {
         func_box!(move |config: PipelineConfiguration|
             if CmdArgs::is("wireframe") {
-                config.with(Self::wireframe(vertices, 0.1))
+                config.with(Self::wireframe(triangles, 0.1))
             } else {
-                config.with_vertices(vertices)
+                config.with_vertices(triangles.vertices())
             }
         )
     }
 
-    #[must_use]
-    pub fn wireframe<V: VertexBufferInfo + Into<VertexN>>(vertices: Vec<V>, normal_len: f32)
+    pub fn wireframe<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>, normal_len: f32)
         -> Configurator<PipelineConfiguration>
     {
-        let vertices_n = vertices.into_iter().map(Into::into).collect::<Vec<_>>();
+        let mapped: Triangles<VertexN> = triangles.cast();
         #[allow(clippy::indexing_slicing)]
-        let mut mesh: Vec<(VertexN, VertexN)> = vertices_n.chunks_exact(3)
-            .flat_map(|face| [(face[0], face[1]), (face[1], face[2]), (face[2], face[0])])
+        let mut edges: Vec<[VertexN; 2]> = mapped.iter()
+            .flat_map(|tri| [[tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]]])
             .collect();
         if normal_len > 0.0 {
-            mesh.extend(
-                vertices_n.into_iter()
-                    .map(|vertex| (vertex, vertex.normal_vertex(normal_len)))
+            edges.extend(
+                mapped.vertices().iter()
+                    .map(|vertex| [*vertex, vertex.normal_vertex(normal_len)])
             );
         }
 
-        Mesh::from(mesh.into_iter()).conf()
+        Edges::from(edges.into_iter())
+            .conf_shader(include_str!("wireframe.wgsl"))
     }
 
-    #[must_use]
     pub fn models<const ML: usize, LA: Pod>(light_aux: LA, models: [Matrix4<f32>; ML], instances: bool) -> Configurator<PipelineConfiguration> {
         let camera = OglCamera::new(
             point3(3.0, 1.5, 3.0),
@@ -202,7 +202,6 @@ impl LightExamples {
         )
     }
 
-    #[must_use]
     pub fn configurator<const ML: usize, LA: Pod, CU: Pod>(
         models: [Model; ML],
         instances: bool,
@@ -259,7 +258,6 @@ impl LightExamples {
         pipeline
     }
 
-    #[must_use]
     pub fn aux<LA: Pod>(light_aux: LA) -> Configurator<PipelineConfiguration> {
         Self::models(light_aux, [Matrix4::identity()], true)
     }
@@ -325,14 +323,16 @@ impl TwoSideLightAux {
         }
     }
 
-    #[must_use]
-    pub fn example<V: VertexBufferInfo + Into<VertexN>>(shader: &str, vertices: Vec<V>)
+    pub fn example<V: VertexBufferInfo + Into<VertexN>>(shader: &str, triangles: Triangles<V>)
         -> PipelineConfiguration
     {
-        let is_two_side = CmdArgs::next_bool("Is two side", false);
         PipelineConfiguration::new(shader)
-            .with(LightExamples::aux(Self::new(is_two_side)))
+            .with(Self::read_args())
             .with_cull_mode(None)
-            .with(LightExamples::read_args_wireframe(vertices))
+            .with(LightExamples::read_args_wireframe(triangles))
+    }
+
+    pub fn read_args() -> Configurator<PipelineConfiguration> {
+        LightExamples::aux(Self::new(CmdArgs::next_bool("Is two side", false)))
     }
 }

@@ -1,14 +1,21 @@
-use crate::common::{create_vertices, run_example};
-use crate::common::vertex_data::CUBE_INDEX_DATA;
+use core::iter::zip;
+
+use crate::common::{run_example, VertexC};
+use crate::common::vertex_data::{CUBE_INDEX_DATA, i8_as_f32};
 
 mod common;
 
+#[allow(clippy::indexing_slicing)]
 fn main() {
+    let cube = CUBE_INDEX_DATA;
+    let vertices: Vec<VertexC> = zip(i8_as_f32([cube.positions])[0], i8_as_f32([cube.colors])[0])
+        .map(|(pos, col)| VertexC::new(pos, col))
+        .collect();
     run_example(
         "Chapter 6 Vertex colors cube",
         include_str!("cube_face_colors.wgsl"),
-        create_vertices(CUBE_INDEX_DATA.positions, CUBE_INDEX_DATA.colors),
+        vertices,
         wgpu::PrimitiveTopology::TriangleList,
-        Some(&CUBE_INDEX_DATA.indices),
+        Some(&cube.indices),
     );
 }

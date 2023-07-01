@@ -1,3 +1,5 @@
+// Chapter 9
+
 struct ModelUniforms {
     points: mat4x4<f32>,
     normals: mat4x4<f32>,

@@ -3,7 +3,7 @@ use winit::event::{DeviceEvent, ElementState};
 
 use webgpu_book::{Content, PipelineConfiguration, transforms::create_rotation};
 
-use crate::common::{Camera, CameraController, create_vertices};
+use crate::common::{Camera, CameraController, create_cube};
 use crate::common::mvp::MvpController;
 use crate::common::vertex_data::FACE_COLORS_CUBE;
 
@@ -51,6 +51,6 @@ fn main() {
             camera_controller: CameraController::new(0.005),
             mouse_pressed: false,
         }))
-        .with_vertices(create_vertices(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors))
+        .with_vertices(create_cube(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors).triangles().vertices())
         .run_title("Chapter 6 Controlled camera");
 }

@@ -48,7 +48,6 @@ impl<T> MvpController<T> {
 }
 
 impl<T: 'static> MvpController<T> where MvpController<T>: Content {
-    #[must_use]
     pub fn from_model_view(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T)
         -> Configurator<PipelineConfiguration>
     {
@@ -60,7 +59,6 @@ impl<T: 'static> MvpController<T> where MvpController<T>: Content {
         }))
     }
 
-    #[must_use]
     pub fn from_ogl<P: Into<Point3<f32>>, F: Into<Rad<f32>>>(
         model: Matrix4<f32>,
         eye: P,
@@ -72,7 +70,6 @@ impl<T: 'static> MvpController<T> where MvpController<T>: Content {
         Self::from_model_view(model, create_view(eye.into(), look_at.into(), up), fovy.into(), value)
     }
 
-    #[must_use]
     pub fn example(value: T) -> Configurator<PipelineConfiguration> {
         Self::from_ogl(
             Matrix4::identity(),
@@ -94,7 +91,6 @@ pub struct AnimationState {
 }
 
 impl AnimationState {
-    #[must_use]
     pub fn example() -> Configurator<PipelineConfiguration> {
         MvpController::example(AnimationState { animation_speed: 1.0 })
     }

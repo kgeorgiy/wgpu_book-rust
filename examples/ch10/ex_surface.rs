@@ -6,6 +6,6 @@ mod common;
 
 fn main() {
     let colormap = Colormap::by_name("jet");
-    let (name, vertices) = Surface::read_args_surface_vertices(&colormap, true);
-    run_example(format!("Chapter 10. {name}").as_str(), vertices);
+    let (name, triangles) = Surface::read_args_triangles(&colormap, true);
+    run_example(format!("Chapter 10. {name}").as_str(), triangles.cast());
 }

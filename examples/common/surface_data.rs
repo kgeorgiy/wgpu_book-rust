@@ -3,12 +3,12 @@
 use core::f32::consts::PI;
 use core::iter::zip;
 
-use cgmath::{ElementWise, InnerSpace, Point3, point3};
+use cgmath::{Array, ElementWise, InnerSpace, Point3, point3, Vector3};
 
 use webgpu_book::{Configurator, func_box, PipelineConfiguration, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
 
-use super::{Vertex, VertexN, VertexC, VertexNCT};
+use super::{Vertex, VertexC, VertexNCT};
 use super::CmdArgs;
 use super::colormap::{Colormap, ColormapInterpolator};
 use super::functions::{breather, klein_bottle, peaks, seashell, sievert_enneper, sinc, sphere, torus, wellenkugel};
@@ -22,7 +22,7 @@ fn normalize_point(
     (ONES + (point - min).div_element_wise(max - min) * 2.0).mul_element_wise(*scale)
 }
 
-fn create_face_quad<V: From<VertexNCT> + Copy>(
+fn create_triangle_quad<V: From<VertexNCT> + Copy>(
     points: [Point3<f32>; 4],
     color: &ColormapInterpolator,
     uvs: [(f32, f32); 4]
@@ -72,12 +72,11 @@ struct SurfaceData {
 type QuadF<V> = fn([Point3<f32>; 4], &ColormapInterpolator, [(f32, f32); 4]) -> Vec<V>;
 
 impl SurfaceData {
-    fn data<U, V>(
+    fn quads<V>(
         &self,
         colormap: &Colormap,
         global_uv: bool,
-        quad: QuadF<V>
-    ) -> Vec<V> where V: From<U> + Copy {
+    ) -> Quads<V> where V: From<VertexNCT> + Copy {
         let (min_u, max_u, nu) = self.min_max_n_u;
         let (min_v, max_v, nv) = self.min_max_n_v;
         let du = (max_u - min_u) / (nu as f32 - 1.0);
@@ -115,38 +114,46 @@ impl SurfaceData {
             }
         }
 
-        let color = colormap.interpolator((
+        let color = &colormap.interpolator((
             normalize_point(&point3(0.0, min_y, 0.0), min_max1, &scale_p).y,
             normalize_point(&point3(0.0, max_y, 0.0), min_max1, &scale_p).y
         ));
 
-        let mut vertices: Vec<V> = Vec::with_capacity(4 * (nu - 1) * (nv - 1));
         let (td_u, td_v) = if global_uv {
             (1.0 / (nu as f32 - 1.0), 1.0 / (nv as f32 - 1.0))
         } else {
             (1.0, 1.0)
         };
-        for i in 0..nu - 1 {
+
+        let pts = &points;
+        (0..nu - 1).flat_map(|i| {
             let u = td_u * i as f32;
             let u_1 = td_u * (i + 1) as f32;
-            for j in 0.. nv - 1 {
+            (0.. nv - 1).map(move |j| {
                 let v = td_v * j as f32;
                 let v_1 = td_v * (j + 1) as f32;
-                let p0 = points[i][j];
-                let p1 = points[i][j + 1];
-                let p2 = points[i + 1][j + 1];
-                let p3 = points[i + 1][j];
-                vertices.append(&mut quad(
-                    [p0, p1, p2, p3],
-                    &color,
-                    [(u, v), (u, v_1), (u_1, v_1), (u_1, v)],
-                ));
-            }
-        }
-        vertices
+
+                let verts = [
+                    (pts[i][j], (u, v)),
+                    (pts[i + 1][j], (u_1, v)),
+                    (pts[i + 1][j + 1], (u_1, v_1)),
+                    (pts[i][j + 1], (u, v_1)),
+                ];
+
+                let normal = (verts[3].0 - verts[0].0).cross(verts[1].0 - verts[0].0).normalize();
+                verts
+                    .map(|(point, uv)| V::from(VertexNCT::new(
+                        point,
+                        normal,
+                        color.interpolate(point.y),
+                        uv
+                    )))
+            })
+        }).into()
     }
 }
 
+#[must_use]
 pub struct Surface<'a> {
     pub(crate) name: &'a str,
     data: fn() -> SurfaceData
@@ -195,107 +202,169 @@ impl Surface<'static> {
         SurfaceData { f: f3d, min_max_n_u: min_max_n_x, min_max_n_v: min_max_n_z, scale: point3(scale, scale, scale) }
     }
 
-    #[must_use] pub fn by_name(name: &str) -> &'static Self {
+    pub fn by_name(name: &str) -> &'static Self {
         Self::SURFACES.iter()
             .find(|surface| surface.name == name)
             .unwrap_or_else(||  panic!("Unknown surface type {name}"))
     }
 
-    #[must_use] pub fn read_args_surface() -> &'static Self {
+    pub fn read_args_surface() -> &'static Self {
         let known = Self::SURFACES.iter()
             .map(|surface| surface.name)
             .collect::<Vec<_>>();
         Self::by_name(CmdArgs::next_known("Surface type", &known).as_str())
     }
 
-    #[must_use] pub fn read_args_surface_vertices<V: From<VertexNCT> + Copy>(colormap: &Colormap, global_uv: bool) -> (String, Vec<V>) {
+    pub fn read_args_triangles(colormap: &Colormap, global_uv: bool) -> (String, Triangles<VertexNCT>)     {
         let surface = Surface::read_args_surface();
-        let vertices = surface.surface_vertices(colormap, global_uv);
-        (surface.name.to_owned(), vertices)
+        (surface.name.to_owned(), surface.triangles(colormap, global_uv))
     }
 }
 
 impl<'a> Surface<'a> {
-    #[must_use] pub fn surface_vertices<V>(&self, colormap: &Colormap, global_uv: bool)
-        -> Vec<V> where V: From<VertexNCT> + Copy
-    {
-        (self.data)().data(colormap, global_uv, create_face_quad)
+    pub fn quads(&self, colormap: &Colormap, global_uv: bool) -> Quads<VertexNCT> {
+        (self.data)().quads(colormap, global_uv)
     }
 
-    #[must_use] pub fn wireframe_vertices<V>(&self, color: Point3<f32>)
-        -> Vec<V> where V: From<VertexC> + Copy
-    {
-        (self.data)().data(&Colormap::fixed(color), true, create_wireframe_quad)
+    pub fn triangles(&self, colormap: &Colormap, global_uv: bool) -> Triangles<VertexNCT> {
+        self.quads(colormap, global_uv).triangles()
     }
 
-    #[must_use] pub fn axes_vertices(&self) -> Vec<VertexC> {
-        let scale = (self.data)().scale * 1.25;
-        vec![
-            VertexC::new((-scale.x, 0.0, 0.0), (0.5, 0.0, 0.0)),
-            VertexC::new(( scale.x, 0.0, 0.0), (1.0, 0.5, 0.5)),
-            VertexC::new((0.0, -scale.y, 0.0), (0.0, 0.5, 0.0)),
-            VertexC::new((0.0,  scale.y, 0.0), (0.5, 1.0, 0.5)),
-            VertexC::new((0.0, 0.0, -scale.z), (0.0, 0.0, 0.5)),
-            VertexC::new((0.0, 0.0,  scale.z), (0.5, 0.5, 1.0)),
-        ]
+    pub fn edges(&self, color: Point3<f32>) -> Edges<VertexNCT> {
+        self.quads(&Colormap::fixed(color), true).into()
+    }
+
+    #[allow(clippy::unused_self)]
+    pub fn axes(&self, scale: f32) -> Edges<VertexC> {
+        [
+            point3(1.0, 0.0, 0.0),
+            point3(0.0, 1.0, 0.0),
+            point3(0.0, 0.0, 1.0),
+        ].into_iter().map(|v| {
+            let color = Point3::from_value(0.5).mul_element_wise(v);
+            [
+                VertexC::new(Point3::from_value(-scale).mul_element_wise(v), color),
+                VertexC::new(Point3::from_value(scale).mul_element_wise(v), color + Vector3::from_value(0.5)),
+            ]
+        }).into()
     }
 }
 
 
 // Mesh
 
-pub struct Mesh<V> {
-    edges: Vec<(V, V)>,
+#[derive(Clone)]
+#[must_use]
+pub struct Mesh<T, const L: usize> {
+    mesh: Vec<[T; L]>,
 }
 
-impl<V> Mesh<V> {
-    pub fn join<T: Iterator<Item=Mesh<V>>>(meshes: T) -> Self {
-        Mesh::from(meshes.flat_map(|mesh| mesh.edges))
+impl<V, const L: usize> Mesh<V, L> {
+    pub fn join<T: Iterator<Item=Mesh<V, L>>>(meshes: T) -> Self {
+        meshes.flat_map(|mesh| mesh.mesh).into()
+    }
+
+    pub fn iter(&self) -> core::slice::Iter<'_, [V; L]> {
+        self.mesh.iter()
+    }
+
+    pub fn map<U, F: Fn(V) -> U>(self, f: F) -> Mesh<U, L> {
+        self.into_iter().map(|vertices| vertices.map(&f)).into()
+    }
+
+    pub fn cast<U>(self) -> Mesh<U, L> where V: Into<U> {
+        self.map(V::into)
+    }
+
+    #[must_use]
+    pub fn vertices(self) -> Vec<V> {
+        self.into()
     }
 }
 
-impl<V: VertexBufferInfo> Mesh<V> {
-    fn conf_shader(self, shader_source: &str) -> Configurator<PipelineConfiguration> {
+impl<V, const L: usize> IntoIterator for Mesh<V, L>{
+    type Item = [V; L];
+    type IntoIter = std::vec::IntoIter<[V; L]>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.mesh.into_iter()
+    }
+}
+
+impl<V, const L: usize, U> From<Mesh<V, L>> for Vec<U> where V: Into<U> {
+    #[must_use]
+    fn from(mesh: Mesh<V, L>) -> Self {
+        mesh.mesh.into_iter().flatten().map(V::into).collect()
+    }
+}
+
+impl<V, const L: usize, T: Iterator<Item=[V; L]>> From<T> for Mesh<V, L> {
+    fn from(mesh: T) -> Self {
+        Mesh { mesh: mesh.collect() }
+    }
+}
+
+
+// Quads
+pub type Quads<V> = Mesh<V, 4>;
+
+impl<V: Copy> Quads<V> {
+    pub fn triangles(self) -> Triangles<V> {
+        Triangles::from(self)
+    }
+
+    pub fn edges(self) -> Edges<V> {
+        Edges::from(self)
+    }
+}
+
+// Edges
+
+pub type Edges<V> = Mesh<V, 2>;
+
+impl<V: VertexBufferInfo> Edges<V> {
+    pub(crate) fn conf_shader(self, shader_source: &str) -> Configurator<PipelineConfiguration> {
         let shader_string = shader_source.to_owned();
         func_box!(move |config: PipelineConfiguration| config
             .with_shader(shader_string.as_str())
-            .with_vertices(self.into())
+            .with_vertices(self.vertices())
             .with_topology(wgpu::PrimitiveTopology::LineList))
     }
 }
 
-impl<V: VertexBufferInfo> From<Mesh<V>> for Vec<V> {
-    fn from(mesh: Mesh<V>) -> Self {
-        mesh.edges.into_iter().flat_map(|(b, e)| [b, e]).collect()
-    }
-}
-
-impl<V, T: Iterator<Item=(V, V)>> From<T> for Mesh<V> {
-    fn from(edges: T) -> Self {
-        Mesh { edges: edges.collect() }
-    }
-}
-
-impl Mesh<Vertex> {
-    #[must_use]
+impl Mesh<Vertex, 2> {
     pub fn into_config(self) -> PipelineConfiguration {
-        PipelineConfiguration::new("").with(self.conf())
-    }
-
-    #[must_use]
-    pub fn conf(self) -> Configurator<PipelineConfiguration> {
-        self.conf_shader(include_str!("../ch06/line3d.wgsl"))
+        PipelineConfiguration::new("").with(self.conf_shader(include_str!("../ch06/line3d.wgsl")))
     }
 }
 
-impl Mesh<VertexN> {
-    #[must_use]
-    pub fn into_config(self) -> PipelineConfiguration {
-        PipelineConfiguration::new("").with(self.conf())
+impl<V, U> From<Quads<V>> for Edges<U> where U: Copy, V: Into<U> {
+    fn from(quads: Quads<V>) -> Self {
+        quads.cast()
+            .mesh.into_iter()
+            .flat_map(|[v0, v1, _, v3]| [[v0, v1], [v0, v3]])
+            .into()
     }
+}
 
-    #[must_use]
-    pub fn conf(self) -> Configurator<PipelineConfiguration> {
-        self.conf_shader(include_str!("wireframe.wgsl"))
+impl<V, U> From<Triangles<V>> for Edges<U> where U: Copy, V: Into<U> {
+    fn from(triangles: Triangles<V>) -> Self {
+        triangles.cast()
+            .mesh.into_iter()
+            .flat_map(|[v0, v1, v2]| [[v0, v1], [v1, v2], [v2, v0]])
+            .into()
+    }
+}
+
+//
+// Triangles
+pub type Triangles<V> = Mesh<V, 3>;
+
+impl<V, U> From<Quads<V>> for Triangles<U> where U: Copy, V: Into<U> {
+    fn from(quads: Quads<V>) -> Self {
+        quads.cast()
+            .mesh.into_iter()
+            .flat_map(|[v0, v1, v2, v3]| [[v0, v3, v1], [v1, v3, v2]])
+            .into()
     }
 }

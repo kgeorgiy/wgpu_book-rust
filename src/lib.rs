@@ -71,6 +71,7 @@ impl RenderPassConfiguration {
 //
 // PipelineConfiguration
 
+#[must_use]
 pub struct PipelineConfiguration {
     shader_source: String,
     vertex_count: usize,
@@ -85,7 +86,7 @@ pub struct PipelineConfiguration {
 }
 
 impl PipelineConfiguration {
-    #[must_use] pub fn new(shader_source: &str) -> Self {
+    pub fn new(shader_source: &str) -> Self {
         PipelineConfiguration {
             shader_source: shader_source.to_owned(),
             vertex_count: 0,
@@ -100,12 +101,12 @@ impl PipelineConfiguration {
         }
     }
 
-    #[must_use] pub fn with_shader(mut self, shader_source: &str) -> Self {
+    pub fn with_shader(mut self, shader_source: &str) -> Self {
         self.shader_source = shader_source.to_owned();
         self
     }
 
-    #[must_use] pub fn with_indexed_vertices<V, I>(mut self, vertices: Vec<V>, indices: &[I])
+    pub fn with_indexed_vertices<V, I>(mut self, vertices: Vec<V>, indices: &[I])
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
         self.indices = Some(I::buffer("Indices", indices));
@@ -115,13 +116,11 @@ impl PipelineConfiguration {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    #[must_use]
     pub fn with_vertices<V: VertexBufferInfo>(mut self, vertices: Vec<V>) -> Self {
         self.vertices = vec![V::buffer("Vertices", &vertices)];
         self.with_vertex_count(vertices.len())
     }
 
-    #[must_use]
     pub fn with_vertices_indices<V, I>(self, vertices: Vec<V>, indices: Option<&[I]>)
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
@@ -131,12 +130,12 @@ impl PipelineConfiguration {
         }
     }
 
-    #[must_use] pub fn with_topology(mut self, topology: wgpu::PrimitiveTopology) -> Self {
+    pub fn with_topology(mut self, topology: wgpu::PrimitiveTopology) -> Self {
         self.topology = topology;
         self
     }
 
-    #[must_use] pub fn with_full_topology(
+    pub fn with_full_topology(
         mut self,
         topology: wgpu::PrimitiveTopology,
         strip_index_format: Option<wgpu::IndexFormat>,
@@ -146,17 +145,16 @@ impl PipelineConfiguration {
     }
 
 
-    #[must_use] pub fn with_strip(mut self, topology: wgpu::PrimitiveTopology) -> Self {
+    pub fn with_strip(mut self, topology: wgpu::PrimitiveTopology) -> Self {
         self.topology = topology;
         self
     }
 
-    #[must_use] pub fn with_textures<const L: usize>(mut self, textures: [TextureInfo; L]) -> Self {
+    pub fn with_textures<const L: usize>(mut self, textures: [TextureInfo; L]) -> Self {
         self.textures = textures.into_iter().collect();
         self
     }
 
-    #[must_use]
     pub fn with_cull_mode(mut self, cull_mode: Option<wgpu::Face>) -> Self {
         self.cull_mode = cull_mode;
         self
@@ -167,7 +165,6 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use]
     pub fn with_vertex_count(mut self, vertices: usize) -> Self {
         self.vertex_count = vertices;
         self
@@ -178,7 +175,7 @@ impl PipelineConfiguration {
         &mut self.uniforms
     }
 
-    #[must_use] pub fn with(self, configurator: Configurator<Self>) -> Self {
+    pub fn with(self, configurator: Configurator<Self>) -> Self {
         configurator.apply(self)
     }
 

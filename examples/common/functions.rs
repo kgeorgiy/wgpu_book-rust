@@ -79,8 +79,8 @@ use cgmath::{Point3, point3};
     )
 }
 
-
-#[must_use] pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
+#[must_use]
+pub fn sievert_enneper(u: f32, v: f32) -> Point3<f32> {
     const A: f32 = 1.0;
 
     let pu = -u / (1.0 + A).sqrt() + (u.tan() * (1.0 + A).sqrt()).atan();
@@ -94,13 +94,15 @@ use cgmath::{Point3, point3};
     point3(x, r_uv * pu.cos(), r_uv * pu.sin())
 }
 
-#[must_use] pub fn sphere(u:f32, v:f32) -> Point3<f32> {
+#[must_use]
+pub fn sphere(u:f32, v:f32) -> Point3<f32> {
     let (sin_u, cos_u) = u.sin_cos();
     let (sin_v, cos_v) = v.sin_cos();
     point3(cos_v * cos_u, sin_v, cos_v * sin_u)
 }
 
-#[must_use] pub fn torus(u: f32, v: f32) -> Point3<f32> {
+#[must_use]
+pub fn torus(u: f32, v: f32) -> Point3<f32> {
     let (sin_u, cos_u) = u.sin_cos();
     let (sin_v, cos_v) = v.sin_cos();
     point3((1.0 + 0.3 * cos_v) * cos_u, 0.3 * sin_v, (1.0 + 0.3 * cos_v) * sin_u)

@@ -1,4 +1,5 @@
 #[non_exhaustive]
+#[must_use]
 pub enum FuncBox<T, R> {
     BoxedFunc(Box<dyn BoxedFunc<T, R>>),
     FnOnce(Box<dyn FnOnce(T) -> R>),
@@ -28,19 +29,19 @@ macro_rules! typed_box {
 }
 
 impl<T: 'static, R: 'static> FuncBox<T, R> {
-    #[must_use] pub fn before<S: 'static>(self, before: fn(S) -> T) -> FuncBox<S, R> {
+    pub fn before<S: 'static>(self, before: fn(S) -> T) -> FuncBox<S, R> {
         FuncBox::FnOnce(Box::new(move |value| self.apply(before(value))))
     }
 }
 
 impl<T, R, F: BoxedFunc<T, R> + 'static> From<Box<F>> for FuncBox<T, R> {
-    #[must_use] fn from(f: Box<F>) -> Self {
+    fn from(f: Box<F>) -> Self {
         Self::BoxedFunc(f)
     }
 }
 
 impl<T, R> From<Box<dyn FnOnce(T) -> R>> for FuncBox<T, R> {
-    #[must_use] fn from(f: Box<dyn FnOnce(T) -> R>) -> Self {
+    fn from(f: Box<dyn FnOnce(T) -> R>) -> Self {
         Self::FnOnce(f)
     }
 }

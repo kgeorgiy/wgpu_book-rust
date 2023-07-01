@@ -1,16 +1,20 @@
 use core::iter::zip;
 
 use crate::common::{LightAux, VertexN};
+use crate::common::surface_data::Quads;
 use crate::common::vertex_data::{FACE_COLORS_CUBE, i8_as_f32};
 
 mod common;
 
-fn create_vertices() -> Vec<VertexN> {
+#[allow(clippy::indexing_slicing)]
+fn create_quads() -> Quads<VertexN> {
     zip(i8_as_f32(FACE_COLORS_CUBE.positions), i8_as_f32(FACE_COLORS_CUBE.normals))
-        .map(|(position, normal)| VertexN::new(position, normal))
-        .collect()
+        .map(|(positions, normals)|
+                 [0, 1, 2, 3].map(|i| VertexN::new(positions[i], normals[i])))
+        .into()
 }
 
 fn main() {
-    LightAux::example(create_vertices()).run_title("Chapter 8. Cube");
+    LightAux::example(create_quads().triangles())
+        .run_title("Chapter 8. Cube");
 }

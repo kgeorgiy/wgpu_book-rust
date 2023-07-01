@@ -1,11 +1,15 @@
-use crate::common::{CmdArgs, run_surface};
+use crate::common::CmdArgs;
 use crate::common::colormap::Colormap;
+use crate::common::light::TwoSideLightAux;
 use crate::common::surface_data::Surface;
 
+#[path = "../common/global_common.rs"]
 mod common;
+
 
 fn main() {
     let colormap = &Colormap::by_name(CmdArgs::next("jet").as_str());
-    let (name, vertices) = Surface::read_args_surface_vertices(colormap, true);
-    run_surface(format!("Chapter 09. {name}").as_str(), vertices);
+    let (name, triangles) = Surface::read_args_triangles(colormap, true);
+    TwoSideLightAux::example(include_str!("shader.wgsl"), triangles)
+        .run_title(format!("Chapter 09. Surface ({name})").as_str());
 }

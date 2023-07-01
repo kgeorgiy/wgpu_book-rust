@@ -29,6 +29,13 @@ impl From<Vertex> for VertexN {
     }
 }
 
+impl From<VertexN> for Vertex {
+    fn from(value: VertexN) -> Self {
+        Self { position: value.position }
+    }
+}
+
+
 
 // Vertex with position and color
 
@@ -116,15 +123,15 @@ impl VertexNC {
     }
 }
 
+impl VertexBufferInfo for VertexNC {
+    const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
+        &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x4];
+}
+
 impl From<VertexNC> for VertexN {
     fn from(value: VertexNC) -> Self {
         VertexN { position: value.position, normal: value.normal }
     }
-}
-
-impl VertexBufferInfo for VertexNC {
-    const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
-        &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x4];
 }
 
 
@@ -161,6 +168,13 @@ impl From<VertexNT> for VertexN {
         Self { position: value.position, normal: value.normal }
     }
 }
+
+impl From<VertexNT> for Vertex {
+    fn from(value: VertexNT) -> Self {
+        Self { position: value.position }
+    }
+}
+
 
 
 // Vertex with position, normal, texture coordinates, and color
@@ -215,5 +229,17 @@ impl From<VertexNCT> for VertexNC {
 impl From<VertexNCT> for VertexN {
     fn from(value: VertexNCT) -> Self {
         Self { position: value.position, normal: value.normal }
+    }
+}
+
+impl From<VertexNCT> for VertexC {
+    fn from(value: VertexNCT) -> Self {
+        Self { position: value.position, color: value.color }
+    }
+}
+
+impl From<VertexNCT> for Vertex {
+    fn from(value: VertexNCT) -> Self {
+        Self { position: value.position }
     }
 }
