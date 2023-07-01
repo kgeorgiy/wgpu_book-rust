@@ -52,10 +52,11 @@ impl<T: 'static> MvpController<T> where MvpController<T>: Content {
     pub fn from_model_view(model: Matrix4<f32>, view: Matrix4<f32>, fovy: Rad<f32>, state: T)
         -> Configurator<PipelineConfiguration>
     {
-        FuncBox::FnOnce(Box::new(move |mut config: PipelineConfiguration| {
+        FuncBox::FnOnce(Box::new(move |mut pipeline: PipelineConfiguration| {
             let mvp_s = Mvp { model, view, projection: create_projection(1.0, fovy) };
-            let mvp: Uniform<Mvp> = config.uniforms().add("Mvp", mvp_s, wgpu::ShaderStages::VERTEX).value();
-            config.listener(typed_box!(dyn Content, MvpController { mvp, fovy, state }))
+            let mvp: Uniform<Mvp> = pipeline.uniforms().add("Mvp", mvp_s, wgpu::ShaderStages::VERTEX).value();
+            pipeline.add_listener(typed_box!(dyn Content, MvpController { mvp, fovy, state }));
+            pipeline
         }))
     }
 
@@ -102,6 +103,6 @@ impl AnimationState {
 impl Content for MvpController<AnimationState> {
     fn update(&mut self, dt: Duration) {
         let (sin, cos) = (self.state.animation_speed * dt.as_secs_f32()).sin_cos();
-        self.set_model(create_rotation([sin, cos, 0.0]));
+        self.set_model(create_rotation([Rad(sin), Rad(cos), Rad(0.0)]));
     }
 }

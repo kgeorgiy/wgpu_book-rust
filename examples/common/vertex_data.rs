@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use cgmath::{Angle, Deg, Point3, point3};
+use cgmath::{Angle, Deg, Point2, point2, Point3, point3, vec3, Vector3};
+use super::surface_data::Mesh;
 
 #[must_use] pub fn i8_as_f32<const R: usize, const C: usize>(values: [[i8; C]; R]) -> [[f32; C]; R] {
     values.map(|vertex| vertex.map(f32::from))
@@ -137,43 +138,63 @@ pub const CUBE_INDEX_DATA: CubeIndexData = {
     }
 };
 
-#[must_use] pub fn sphere_position(r: f32, theta: Deg<f32>, phi: Deg<f32>) -> Point3<f32> {
-    let (sin_theta, cos_theta) = theta.sin_cos();
-    let (sin_phi, cos_phi) = phi.sin_cos();
-    point3(r * sin_theta * cos_phi, r * cos_theta, -r * sin_theta * sin_phi)
-}
-
 pub fn cylinder_position<T: Into<Deg<f32>>>(r: f32, y: f32, theta: T) -> Point3<f32> {
     let (sin_theta, cos_theta) = theta.into().sin_cos();
     point3(r * cos_theta, y, -r * sin_theta)
 }
 
-#[must_use] pub fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Point3<f32> {
+#[must_use]
+pub fn torus_position(r_torus: f32, r_tube: f32, u: Deg<f32>, v: Deg<f32>) -> Point3<f32> {
     let (sin_v, cos_v) = v.sin_cos();
     let (sin_u, cos_u) = u.sin_cos();
     let r = r_torus + r_tube * cos_v;
     point3(r * cos_u, r_tube * sin_v, -r * sin_u)
 }
 
-pub fn sphere_vertices<V: Copy>(r: f32, u: usize, v: usize, vertex: fn(f32, Deg<f32>, Deg<f32>) -> V) -> Vec<V> {
-    let d_theta = Deg(180.0 / u as f32);
-    let d_phi = Deg(360.0 / v as f32);
+type SphereVertexF<'a, V> = &'a dyn Fn(Point3<f32>, Vector3<f32>, Point2<f32>) -> V;
+type ItemF<'a, V, R> = &'a dyn Fn([V; 4]) -> Vec<R>;
 
-    let mut vertices: Vec<V> = Vec::with_capacity(6 * u * v);
-    for i in 0..u {
-        for j in 0..v {
-            let theta = d_theta * i as f32;
-            let phi = d_phi * j as f32;
-            let theta1 = d_theta * (i + 1) as f32;
-            let phi1 = d_phi * (j + 1) as f32;
-            let p0 = vertex(r, theta, phi);
-            let p1 = vertex(r, theta1, phi);
-            let p2 = vertex(r, theta1, phi1);
-            let p3 = vertex(r, theta, phi1);
+#[must_use]
+pub fn sphere_vertex<V: Copy>(vertex: SphereVertexF<V>, center: Point3<f32>, r: f32, uv: Point2<f32>) -> V {
+    let (sin_lon, cos_lon) = (Deg::full_turn() * uv.x).sin_cos();
+    let (sin_lat, cos_lat) = (Deg::full_turn() * uv.y / 2.0).sin_cos();
+    let normal = vec3(sin_lat * cos_lon, cos_lat, -sin_lat * sin_lon);
+    vertex(center + r * normal, normal, uv)
+}
 
-            vertices.extend_from_slice(&[p0, p1, p3]);
-            vertices.extend_from_slice(&[p1, p2, p3]);
-        }
-    }
-    vertices
+#[must_use]
+pub fn sphere_vertices<V: Copy, R>(
+    center: Point3<f32>,
+    r: f32,
+    u: usize,
+    v: usize,
+    vertex_f: SphereVertexF<V>,
+    item_f: ItemF<V, R>
+) -> Vec<R> {
+    let du = 1.0 / u as f32;
+    let dv = 1.0 / v as f32;
+
+    (0..u).flat_map(|u_i| (0..v).flat_map(move |v_i| {
+            let u_v = du * u_i as f32;
+            let v_v = dv * v_i as f32;
+            let u_v1 = du * (u_i + 1) as f32;
+            let v_v1 = dv * (v_i + 1) as f32;
+            let p0 = sphere_vertex(vertex_f, center, r, point2(u_v, v_v));
+            let p1 = sphere_vertex(vertex_f, center, r, point2(u_v1, v_v));
+            let p2 = sphere_vertex(vertex_f, center, r, point2(u_v1, v_v1));
+            let p3 = sphere_vertex(vertex_f, center, r, point2(u_v, v_v1));
+
+            item_f([p0, p1, p2, p3])
+    })).collect()
+}
+
+#[must_use]
+pub fn sphere_faces<V: Copy>(center: Point3<f32>, r: f32, u: usize, v: usize, vertex_f: SphereVertexF<V>) -> Vec<V> {
+    sphere_vertices(center, r, u, v, vertex_f, &|[p0, p1, p2, p3]| vec![[p0, p3, p1], [p1, p3, p2]])
+        .into_iter().flatten().collect()
+}
+
+#[must_use]
+pub fn sphere_edges<V: Copy>(center: Point3<f32>, r: f32, u: usize, v: usize, vertex_f: SphereVertexF<V>) -> Mesh<V> {
+    Mesh::from(sphere_vertices(center, r, u, v, vertex_f, &|[v0, v1, _, v3]| vec![(v0, v1), (v0, v3)]).into_iter())
 }

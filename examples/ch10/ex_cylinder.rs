@@ -68,5 +68,5 @@ fn side(y: f32, theta: Deg<f32>, r: f32, dn: f32, h: f32, du: f32, dv: f32) -> V
 }
 
 fn main() {
-    run_example("Chapter 10. Cylinder", cylinder_vertices(0.8, 1.5, 2.0, 50, 20.0, 0.5));
+    run_example("Chapter 10. Cylinder", cylinder_vertices(0.8, 1.5, 2.0, 50, 1.0, 0.5));
 }

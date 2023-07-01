@@ -162,12 +162,10 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use]
-    pub fn listener(mut self, listener: Box<dyn Content>) -> Self {
+    pub fn add_listener(&mut self, listener: Box<dyn Content>) -> &mut Self {
         self.listeners.push(listener);
         self
     }
-
 
     #[must_use]
     pub fn with_vertex_count(mut self, vertices: usize) -> Self {

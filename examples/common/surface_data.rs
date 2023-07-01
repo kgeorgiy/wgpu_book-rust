@@ -248,6 +248,12 @@ pub struct Mesh<V> {
     edges: Vec<(V, V)>,
 }
 
+impl<V> Mesh<V> {
+    pub fn join<T: Iterator<Item=Mesh<V>>>(meshes: T) -> Self {
+        Mesh::from(meshes.flat_map(|mesh| mesh.edges))
+    }
+}
+
 impl<V: VertexBufferInfo> Mesh<V> {
     fn conf_shader(self, shader_source: &str) -> Configurator<PipelineConfiguration> {
         let shader_string = shader_source.to_owned();
@@ -264,7 +270,7 @@ impl<V: VertexBufferInfo> From<Mesh<V>> for Vec<V> {
     }
 }
 
-impl<V: VertexBufferInfo, T: Iterator<Item=(V, V)>> From<T> for Mesh<V> {
+impl<V, T: Iterator<Item=(V, V)>> From<T> for Mesh<V> {
     fn from(edges: T) -> Self {
         Mesh { edges: edges.collect() }
     }

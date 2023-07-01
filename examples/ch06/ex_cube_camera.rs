@@ -1,6 +1,4 @@
-use core::f32::consts::PI;
-
-use cgmath::Deg;
+use cgmath::{Angle, Deg, Rad};
 use winit::event::{DeviceEvent, ElementState};
 
 use webgpu_book::{Content, PipelineConfiguration, transforms::create_rotation};
@@ -44,7 +42,8 @@ impl Content for MvpController<CameraState> {
 }
 
 fn main() {
-    let model = create_rotation([PI / 8.0, PI / 8.0, PI / 8.0]);
+    let angle = Rad::full_turn() / 16.0;
+    let model = create_rotation([angle, angle, angle]);
     let camera = Camera::new((0.0, 0.0, -5.0), Deg(90.0), Deg(0.0));
     PipelineConfiguration::new(include_str!("cube_face_colors.wgsl"))
         .with(MvpController::from_model_view(model, camera.view(), Deg(90.0).into(), CameraState {

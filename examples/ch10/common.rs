@@ -8,10 +8,11 @@ pub use self::global_common::*;
 mod global_common;
 
 pub fn run_example(title: &str, vertices: Vec<VertexNT>) -> ! {
-    let texture_file = CmdArgs::next("brick");
+    let texture_file = CmdArgs::next("earth");
 
     TwoSideLightAux::example(include_str!("shader.wgsl"), vertices)
         .with_textures([TextureInfo::repeated(format!("examples/ch10/assets/{texture_file}.png"))])
+        .with_cull_mode(Some(wgpu::Face::Back))
         .run_title(title)
 }
 

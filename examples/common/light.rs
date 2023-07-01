@@ -1,10 +1,9 @@
 #![allow(clippy::extra_unused_type_parameters)]
 
-use core::f32::consts::PI;
 use core::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Angle, EuclideanSpace, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3};
+use cgmath::{Angle, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3, Zero};
 
 use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, Uniform, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
@@ -18,19 +17,21 @@ use super::surface_data::Mesh;
 #[derive(Clone)]
 pub struct OglCamera {
     eye: Point3<f32>,
-    look_at: Vector3<f32>,
+    look_at: Point3<f32>,
     up: Vector3<f32>,
     fovy: Rad<f32>,
     projection: Matrix4<f32>,
 }
 
 impl OglCamera {
-    #[must_use] pub fn new(eye: Point3<f32>, look_at: Vector3<f32>, up: Vector3<f32>, fovy: Rad<f32>) -> Self {
+    #[must_use]
+    pub fn new(eye: Point3<f32>, look_at: Point3<f32>, up: Vector3<f32>, fovy: Rad<f32>) -> Self {
         Self { eye, look_at, up, fovy, projection: create_projection(1.0, fovy) }
     }
 
-    #[must_use] pub fn view(&self) -> Matrix4<f32> {
-        Matrix4::look_to_rh(self.eye, self.look_at, self.up)
+    #[must_use]
+    pub fn view(&self) -> Matrix4<f32> {
+        Matrix4::look_to_rh(self.eye, self.look_at - self.eye, self.up)
     }
 
     pub fn resize(&mut self, width: u32, height: u32) -> Matrix4<f32> {
@@ -38,7 +39,7 @@ impl OglCamera {
         self.projection
     }
 
-    pub(crate) fn projection(&self) -> Matrix4<f32> {
+    pub fn projection(&self) -> Matrix4<f32> {
         self.projection
     }
 }
@@ -73,7 +74,7 @@ pub struct LightUniforms<A> {
     pub(crate) aux: A,
 }
 
-impl<A: Pod> LightUniforms<A> {
+impl<A> LightUniforms<A> {
     pub fn new(
         specular_color: Point3<f32>,
         ambient_intensity: f32,
@@ -90,6 +91,14 @@ impl<A: Pod> LightUniforms<A> {
             specular_shininess,
             aux,
         }
+    }
+
+    pub fn example(aux: A) -> LightUniforms<A> {
+        LightUniforms::new(
+            point3(1.0, 1.0, 0.0),
+            0.1, 1.0, 2.0, 30.0,
+            aux
+        )
     }
 }
 
@@ -178,77 +187,76 @@ impl LightExamples {
 
     #[must_use]
     pub fn models<const ML: usize, LA: Pod>(light_aux: LA, models: [Matrix4<f32>; ML], instances: bool) -> Configurator<PipelineConfiguration> {
-        let camera = Self::camera();
-        let light = LightUniforms::new(
-            point3(1.0, 1.0, 0.0),
-            0.1, 1.0, 2.0, 30.0,
-            light_aux
+        let camera = OglCamera::new(
+            point3(3.0, 1.5, 3.0),
+            point3(0.0, 0.0, 0.0),
+            Vector3::unit_y(),
+            Rad::full_turn() / 5.0,
         );
-        Self::configurator(models.map(Model::new), instances, camera, light, 1.0)
+        Self::configurator::<ML, LA, CameraUniform>(
+            models.map(Model::new),
+            instances,
+            camera,
+            LightUniforms::example(light_aux),
+            1.0
+        )
     }
 
     #[must_use]
-    pub fn configurator<const ML: usize, LA: Pod>(
+    pub fn configurator<const ML: usize, LA: Pod, CU: Pod>(
         models: [Model; ML],
         instances: bool,
         camera: OglCamera,
         light: LightUniforms<LA>,
         animation_speed: f32
-    ) -> FuncBox<PipelineConfiguration, PipelineConfiguration> {
+    ) -> FuncBox<PipelineConfiguration, PipelineConfiguration> where OglCamera: To<CU> {
         func_box!(move |pipeline: PipelineConfiguration| {
-            Self::configure(pipeline, models, instances, camera, light, animation_speed)
+            Self::configure::<ML, LA, CU>(pipeline, models, instances, camera, light, animation_speed)
         })
     }
 
-    fn configure<const ML: usize, LA: Pod>(
+    fn configure<const ML: usize, LA: Pod, CU: Pod>(
         mut pipeline: PipelineConfiguration,
         models: [Model; ML],
         instances: bool,
         camera: OglCamera,
         light: LightUniforms<LA>,
         animation_speed: f32,
-    ) -> PipelineConfiguration {
-        let side = camera.look_at.cross(camera.up);
+    ) -> PipelineConfiguration where OglCamera: To<CU> {
+        let forward = (camera.look_at - camera.eye).normalize();
+        let side = forward.cross(camera.up).normalize();
         let fragment = FragmentUniforms::new(
             camera.eye.to_homogeneous().into(),
-            (side.normalize() - camera.look_at.normalize() * 2.0).extend(0.0).into()
+            (side - forward * 2.0).extend(0.0).into()
         );
 
         let uniforms = pipeline.uniforms();
-        let models_u = if instances {
-            uniforms.instances(ML);
-            uniforms.add("Models", models, wgpu::ShaderStages::VERTEX)
-                .instance_array::<ModelUniforms>()
-        } else {
-            uniforms.variants((0..ML).map(|i| vec![i]).collect());
-            uniforms.add("Models", models, wgpu::ShaderStages::VERTEX)
-                .bindings_array::<ModelUniforms>()
-        };
 
-        let camera_u = uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX)
-            .value::<CameraUniform>();
-        let fragment_u = uniforms.add("Fragment", fragment, wgpu::ShaderStages::FRAGMENT)
-            .value::<FragmentUniforms>();
-        let light_u = uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
-            .value::<LightUniforms<LA>>();
-
-        pipeline.listener(Box::new(Uniforms {
-            models: models_u,
-            camera: camera_u,
-            fragment: fragment_u,
-            light: light_u,
+        let unif = Uniforms {
+            models: (
+                if instances {
+                    uniforms
+                        .instances(ML)
+                        .add("Models", models, wgpu::ShaderStages::VERTEX)
+                        .instance_array::<ModelUniforms>()
+                } else {
+                    uniforms
+                        .variants((0..ML).map(|i| vec![i]).collect())
+                        .add("Models", models, wgpu::ShaderStages::VERTEX)
+                        .bindings_array::<ModelUniforms>()
+                }
+            ),
+            camera: uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT)
+                .value::<CU>(),
+            fragment: uniforms.add("Fragment", fragment, wgpu::ShaderStages::FRAGMENT)
+                .value::<FragmentUniforms>(),
+            light: uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
+                .value::<LightUniforms<LA>>(),
 
             animation_speed,
-        }))
-    }
-
-    #[must_use]
-    pub fn camera() -> OglCamera {
-        let eye = point3(3.0, 1.5, 3.0);
-        let look_direction = -eye.to_vec();
-        let up_direction = Vector3::unit_y();
-        let fovy = Rad(2.0 * PI / 5.0);
-        OglCamera::new(eye, look_direction, up_direction, fovy)
+        };
+        pipeline.add_listener(Box::new(unif));
+        pipeline
     }
 
     #[must_use]
@@ -275,14 +283,26 @@ impl<const ML: usize, LA: Pod> Content for Uniforms<ML, LA> {
     }
 
     fn update(&mut self, dt: Duration) {
-        let angle = Rad(self.animation_speed * dt.as_secs_f32());
-        let rotation = create_rotation([angle.sin(), angle.cos(), 0.0]);
+        let time = self.animation_speed * dt.as_secs_f32();
+        let (angle_sin, angle_cos) = (Rad::full_turn() * time / 5.0).sin_cos();
+        let rotation = create_rotation([
+            Rad::full_turn() * angle_sin / 2.0,
+            Rad::full_turn() * angle_cos / 2.0,
+            Rad::zero()
+        ]);
+
         for model in self.models.as_mut().iter_mut() {
             model.rotation = rotation;
         }
 
-        self.light.as_mut().ambient_intensity = dt.as_secs_f32() / 5.0 % 1.0;
-        self.camera.as_mut().eye.z = 3.0 + (dt.as_secs_f32() % 6.0 - 3.0).abs();
+        self.light.as_mut().ambient_intensity = Self::saw(time / 4.0);
+        self.camera.as_mut().eye.z = 3.0 + Self::saw(time / 6.0) * 10.0;
+    }
+}
+
+impl<LA: Pod, const ML: usize> Uniforms<ML, LA> {
+    fn saw(time: f32) -> f32 {
+        (time % 1.0 - 0.5).abs() * 2.0
     }
 }
 

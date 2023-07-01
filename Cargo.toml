@@ -11,13 +11,15 @@ bytemuck = {version = "1.13.1", features = ["derive", "min_const_generics"]}
 cgmath = "0.18.0"
 image = "0.24.6"
 pollster = "0.3.0"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
 raw-window-handle = "0.5.2"
 wgpu = "0.16.1"
 winit = "0.28.6"
 
 [[example]]
-name = "ch00_hlists"
-path = "examples/ch00/ex_hlist.rs"
+name = "ch00_sheres"
+path = "examples/ch00/ex_spheres.rs"
 
 [[example]]
 name = "ch01_test01"
