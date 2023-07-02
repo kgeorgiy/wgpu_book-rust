@@ -2,10 +2,10 @@ use cgmath::point3;
 
 use webgpu_book::RenderPassConfiguration;
 
+use crate::common::VertexNC;
 use crate::common::colormap::Colormap;
 use crate::common::light::TwoSideLightAux;
 use crate::common::surface_data::Surface;
-use crate::common::VertexNCT;
 
 mod common;
 #[path = "../ch07/ex_torus.rs"]
@@ -19,7 +19,7 @@ fn main() -> ! {
 
     let triangles = TwoSideLightAux::example(
         include_str!("../ch09/shader.wgsl"),
-        surface.triangles(colormap, false).cast::<VertexNCT>()
+        surface.triangles(colormap, false).cast::<VertexNC>()
     );
 
     let axes = common::edges_pipeline(surface.axes(2.5));

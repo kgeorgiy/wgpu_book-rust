@@ -76,7 +76,7 @@ pub struct PipelineConfiguration {
     topology: wgpu::PrimitiveTopology,
     cull_mode: Option<wgpu::Face>,
     strip_index_format: Option<wgpu::IndexFormat>,
-    vertices: Vec<SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>>,
+    vertices: Vec<(SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>, String)>,
     indices: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
     uniforms: UniformsConfiguration,
     listeners: Vec<Box<dyn Content>>,
@@ -119,7 +119,8 @@ impl PipelineConfiguration {
         vertices: Vec<V>,
         topology: wgpu::PrimitiveTopology
     ) -> Self {
-        self.vertices = vec![V::buffer("Vertices", &vertices)];
+        self.vertices = vec![(V::buffer("Vertices", &vertices), V::struct_declaration())];
+        println!("{}", V::struct_declaration());
         self
             .with_topology(topology)
             .with_vertex_count(vertices.len())

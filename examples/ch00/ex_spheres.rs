@@ -1,4 +1,4 @@
-#![allow(clippy::redundant_clone)]
+#![allow(clippy::used_underscore_binding)]
 
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, Point3, point3, Rad, SquareMatrix, vec3, Vector3, Zero};
@@ -7,7 +7,7 @@ use rand::{Rng, SeedableRng};
 use webgpu_book::{Configurator, PipelineConfiguration, RenderConfiguration, RenderPassConfiguration, To, VertexBufferInfo};
 
 use crate::common::{VertexN, VertexNC};
-use crate::common::light::{LightExamples, LightUniforms, Model, OglCamera};
+use crate::common::light::{CameraUniform, LightExamples, LightUniforms, Model, OglCamera};
 use crate::common::surface_data::{Edges, Quads};
 use crate::common::vertex_data::sphere_quads;
 
@@ -56,8 +56,10 @@ struct SphereVertex {
 }
 
 impl VertexBufferInfo for SphereVertex {
+    const NAME: &'static str = "Sphere";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32, 3=>Uint32];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["center", "color", "radius", "index"];
 }
 
 #[repr(C)]
@@ -97,7 +99,7 @@ fn main() {
 
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(12345);
 
-    let spheres: Vec<Sphere> = (0..1000)
+    let spheres: Vec<Sphere> = (0..10)
         .map(|_| {
             Sphere {
                 center: (point3(rng.gen(), rng.gen(), rng.gen()) * 2.0 - ONES) * SCALE,
@@ -121,22 +123,25 @@ fn main() {
     // ];
 
 
-    // let faces_pipeline = PipelineConfiguration::new(include_str!("spheres_mesh.wgsl"))
-    //     .with(light::<CameraViewProjectUniform>())
-    //     .with_cull_mode(Some(wgpu::Face::Back))
-    //     .with_vertices(Triangles::join(spheres.iter().map(|sphere| sphere.quads(8).into())).into());
-    //
-    // let edges_pipeline = Edges::join(spheres.iter().map(|sphere| sphere.edges(8))).into_config()
-    //     .with(light::<CameraUniform>());
+    let quads = Quads::join(spheres.iter().map(|sphere| sphere.quads(8)));
 
-    let points_pipeline = PipelineConfiguration::new(include_str!("spheres.wgsl"))
+    let _faces_pipeline = PipelineConfiguration::new(include_str!("spheres_mesh.wgsl"))
+        .with(light::<CameraViewProjectUniform>())
+        .with_cull_mode(Some(wgpu::Face::Back))
+        .with(quads.clone().triangles().vertices());
+
+    let _edges_pipeline = PipelineConfiguration::new(include_str!("../common/wireframe.wgsl"))
+        .with(quads.cast::<VertexN>().edges().vertices())
+        .with(light::<CameraUniform>());
+
+    let _points_pipeline = PipelineConfiguration::new(include_str!("spheres.wgsl"))
         .with(light::<CameraViewProjectUniform>())
         .with(Quads::join(spheres.iter().map(Sphere::billboards)).triangles().vertices());
 
     RenderConfiguration::new(vec![
-        // RenderPassConfiguration::new(vec![faces_pipeline]),
-        RenderPassConfiguration::new(vec![points_pipeline]),
-        // RenderPassConfiguration::new(vec![edges_pipeline]).with_load(wgpu::LoadOp::Load),
+        RenderPassConfiguration::new(vec![_faces_pipeline]),
+        RenderPassConfiguration::new(vec![_points_pipeline]),
+        RenderPassConfiguration::new(vec![_edges_pipeline]).with_load(wgpu::LoadOp::Load),
     ])
         .run_title("Chapter 0. Spheres");
 }

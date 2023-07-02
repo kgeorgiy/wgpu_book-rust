@@ -13,7 +13,6 @@ pub fn run_example(title: &str, triangles: Triangles<VertexNT>) -> ! {
 
     TwoSideLightAux::example(include_str!("shader.wgsl"), triangles)
         .with_textures([TextureInfo::repeated(format!("examples/ch10/assets/{texture_file}.png"))])
-        .with_cull_mode(Some(wgpu::Face::Back))
         .run_title(title)
 }
 

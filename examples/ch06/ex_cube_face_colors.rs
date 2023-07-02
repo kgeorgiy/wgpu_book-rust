@@ -10,5 +10,5 @@ fn main() {
     PipelineConfiguration::new(include_str!("cube_face_colors.wgsl"))
         .with(MvpController::example(()))
         .with(quads.triangles().vertices())
-        .run_title("Chapter 6 Solid face colors cube");
+        .run_title("Chapter 6. Solid face colors cube");
 }

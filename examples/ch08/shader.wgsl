@@ -16,13 +16,13 @@ struct Output {
 }
 
 @vertex
-fn vs_main(@location(0) pos: vec4<f32>, @location(1) normal: vec4<f32>) -> Output {
-    let position: vec4<f32> = model_u.points * pos;
+fn vs_main(in: VertexN) -> Output {
+    let position: vec4<f32> = model_u.points * in.position;
 
     var output: Output;
     output.position = camera_u.view_project * position;
     output.v_position = position;
-    output.v_normal = model_u.normals * normal;
+    output.v_normal = model_u.normals * in.normal;
     return output;
 }
 

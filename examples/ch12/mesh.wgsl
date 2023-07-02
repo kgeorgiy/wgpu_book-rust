@@ -15,10 +15,10 @@ struct Output {
 }
 
 @vertex
-fn vs_main(@location(0) pos: vec4<f32>, @location(1) color: vec4<f32>) -> Output {
+fn vs_main(in: VertexC) -> Output {
     var output: Output;
-    output.position = camera_u.view_project * model_u.points * pos;
-    output.v_color = color;
+    output.position = camera_u.view_project * model_u.points * in.position;
+    output.v_color = in.color;
     return output;
 }
 

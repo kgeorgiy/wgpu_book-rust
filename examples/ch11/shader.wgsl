@@ -9,13 +9,6 @@ struct CameraUniforms {
 }
 @group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
 
-struct Input {
-    @location(0) pos: vec4<f32>,
-    @location(1) normal: vec4<f32>,
-    @location(2) color: vec4<f32>,
-    @location(3) uv: vec2<f32>,
-}
-
 struct Output {
     @builtin(position) position: vec4<f32>,
     @location(0) v_position: vec4<f32>,
@@ -25,8 +18,8 @@ struct Output {
 }
 
 @vertex
-fn vs_main(in: Input) -> Output {
-    let position: vec4<f32> = model_u.points * in.pos;
+fn vs_main(in: VertexNT) -> Output {
+    let position: vec4<f32> = model_u.points * in.position;
 
     var output: Output;
     output.position = camera_u.view_project * position;

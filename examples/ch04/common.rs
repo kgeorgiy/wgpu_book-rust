@@ -15,8 +15,10 @@ pub struct Vertex {
 }
 
 impl VertexBufferInfo for Vertex {
+    const NAME: &'static str = "Vertex";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x2, 1=>Float32x3];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "color"];
 }
 
 pub fn run_example(title: &str, vertices: Vec<Vertex>, indices: Option<&[u16]>) -> ! {

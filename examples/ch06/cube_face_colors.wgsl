@@ -1,24 +1,24 @@
 struct Uniforms {
-    mvpMatrix : mat4x4<f32>,
-};
+    mvpMatrix: mat4x4<f32>,
+}
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 struct Output {
-    @builtin(position) Position: vec4<f32>,
-    @location(0) vColor: vec4<f32>,
-};
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+}
 
 
 @vertex
-fn vs_main(@location(0) pos: vec4<f32>, @location(1) color: vec4<f32>) -> Output {
+fn vs_main(in: VertexC) -> Output {
     var output: Output;
-    output.Position = uniforms.mvpMatrix * pos;
-    output.vColor = color;
+    output.position = uniforms.mvpMatrix * in.position;
+    output.color = in.color;
     return output;
 }
 
 @fragment
-fn fs_main(@location(0) vColor: vec4<f32>) -> @location(0) vec4<f32> {
-    return vColor;
+fn fs_main(@location(0) color: vec4<f32>) -> @location(0) vec4<f32> {
+    return color;
 }

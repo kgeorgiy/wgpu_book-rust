@@ -247,9 +247,11 @@ impl Pipeline {
         wg: &WebGPUDevice,
         depth_stencil: Option<wgpu::DepthStencilState>
     ) -> Result<(Pipeline, Vec<Box<dyn Content>>)> {
-        let vertex_buffers = conf.vertices.into_iter()
-            .map(|descriptor| descriptor.create_buffer(wg))
-            .collect::<Vec<_>>();
+        let (vertex_buffers, vertex_decls): (Vec<SmartBuffer<wgpu::VertexBufferLayout>>, Vec<String>) =
+            conf.vertices.into_iter()
+                .map(|(descriptor, decl)|
+                    (descriptor.create_buffer(wg), decl))
+                .unzip();
         let index_buffer = conf.indices
             .map(|descriptor| descriptor.create_buffer(wg));
         let textures = Textures::new(wg, &conf.textures)?;
@@ -263,7 +265,7 @@ impl Pipeline {
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>(),
             &[&uniforms.variants.layout, &textures.variants.layout],
-            conf.shader_source.as_str(),
+            format!("{}\n\n{}", vertex_decls.join("\n\n"), conf.shader_source).as_str(),
             wgpu::PrimitiveState {
                 topology: conf.topology,
                 strip_index_format: conf.strip_index_format,

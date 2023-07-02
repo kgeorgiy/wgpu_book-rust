@@ -2,7 +2,7 @@ use core::{any::TypeId, mem::size_of, fmt::Debug};
 use std::rc::Rc;
 
 use bytemuck::{cast_slice, Pod};
-use wgpu::{BindingResource, Buffer, BufferAddress, BufferBinding, BufferSize, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexStepMode};
+use wgpu::{BindingResource, Buffer, BufferAddress, BufferBinding, BufferSize, BufferUsages, IndexFormat, Queue, ShaderStages, VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
 use crate::webgpu::WebGPUDevice;
@@ -146,7 +146,34 @@ impl<T: Pod> BufferInfo<ShaderStages> for T {
 // VertexBufferInfo
 
 pub trait VertexBufferInfo where Self: Pod + Debug {
+    const NAME: &'static str;
     const ATTRIBUTES: &'static [VertexAttribute];
+    const ATTRIBUTE_NAMES: &'static [&'static str];
+
+    #[must_use]
+    fn struct_declaration() -> String {
+        let attributes = Self::ATTRIBUTES.iter().zip(Self::ATTRIBUTE_NAMES)
+            .map(|(attr, name)| format!("    @location({}) {}: {},", attr.shader_location, name, Self::format_name(attr.format)))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        format!("struct {} {{\n{}\n    @builtin(instance_index) instance_index: u32,\n}}\n\n", Self::NAME, attributes)
+    }
+
+    #[must_use]
+    fn format_name(format: VertexFormat) -> &'static str {
+        match format {
+            VertexFormat::Float32 => "f32",
+            VertexFormat::Float32x2 => "vec2<f32>",
+            VertexFormat::Float32x3 => "vec3<f32>",
+            VertexFormat::Float32x4 => "vec4<f32>",
+            VertexFormat::Uint32 => "u32",
+            VertexFormat::Uint32x2 => "vec2<u32>",
+            VertexFormat::Uint32x3 => "vec3<u32>",
+            VertexFormat::Uint32x4 => "vec4<u32>",
+            _ => panic!("Unsupported vertex format {format:?}")
+        }
+    }
 }
 
 impl<T: VertexBufferInfo> BufferInfo<VertexBufferLayout<'static>> for T {

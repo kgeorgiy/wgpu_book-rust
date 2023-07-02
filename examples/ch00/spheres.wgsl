@@ -10,13 +10,6 @@ struct CameraUniforms {
 }
 @group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
 
-struct Sphere {
-    @location(0) center: vec4<f32>,
-    @location(1) color: vec4<f32>,
-    @location(2) radius: f32,
-    @location(3) index: u32,
-}
-
 struct Output {
     @builtin(position) position: vec4<f32>,
     @location(0) deltas: vec2<f32>,

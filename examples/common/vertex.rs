@@ -19,8 +19,10 @@ impl Vertex {
 }
 
 impl VertexBufferInfo for Vertex {
+    const NAME: &'static str = "Vertex";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position"];
 }
 
 impl From<Vertex> for VertexN {
@@ -57,8 +59,10 @@ impl VertexC {
 }
 
 impl VertexBufferInfo for VertexC {
+    const NAME: &'static str = "VertexC";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "color"];
 }
 
 impl From<VertexC> for VertexN {
@@ -97,7 +101,9 @@ impl VertexN {
 }
 
 impl VertexBufferInfo for VertexN {
+    const NAME: &'static str = "VertexN";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] = &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "normal"];
 }
 
 // Vertex with position, normal, and color
@@ -124,13 +130,21 @@ impl VertexNC {
 }
 
 impl VertexBufferInfo for VertexNC {
+    const NAME: &'static str = "VertexNC";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x4];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "normal", "color"];
 }
 
 impl From<VertexNC> for VertexN {
     fn from(value: VertexNC) -> Self {
         VertexN { position: value.position, normal: value.normal }
+    }
+}
+
+impl From<VertexNC> for Vertex {
+    fn from(value: VertexNC) -> Self {
+        Vertex { position: value.position }
     }
 }
 
@@ -159,8 +173,10 @@ impl VertexNT {
 }
 
 impl VertexBufferInfo for VertexNT {
+    const NAME: &'static str = "VertexNT";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x2];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "normal", "uv"];
 }
 
 impl From<VertexNT> for VertexN {
@@ -210,8 +226,10 @@ impl VertexNCT {
 }
 
 impl VertexBufferInfo for VertexNCT {
+    const NAME: &'static str = "VertexNCT";
     const ATTRIBUTES: &'static [wgpu::VertexAttribute] =
         &wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4, 2=>Float32x4, 3=>Float32x2];
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "normal", "color", "uv"];
 }
 
 impl From<VertexNCT> for VertexNT {
