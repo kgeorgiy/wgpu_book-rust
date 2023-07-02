@@ -17,7 +17,6 @@ fn create_vertices() -> Vec<Vertex> {
 fn main() {
     PipelineConfiguration::new(include_str!("line3d.wgsl"))
         .with(MvpController::example(()))
-        .with_vertices(create_vertices())
-        .with_topology(wgpu::PrimitiveTopology::LineStrip)
+        .with_vertices(create_vertices(), wgpu::PrimitiveTopology::LineStrip)
         .run_title("Chapter 6 Line");
 }

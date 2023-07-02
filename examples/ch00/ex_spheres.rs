@@ -34,14 +34,15 @@ impl Sphere {
     }
 
     #[allow(dead_code)]
-    fn billboards(&self) -> [[SphereVertex; 3]; 2] {
+    fn billboards(&self) -> Quads<SphereVertex> {
         let v = [0, 1, 2, 3].map(|i| SphereVertex {
             center: self.center.to_homogeneous().into(),
             color: self.color.to_homogeneous().into(),
             radius: self.radius,
             index: i,
         });
-        [[v[0], v[3], v[2]], [v[2], v[1], v[0]]]
+        [v].into_iter().into()
+        // [[v[0], v[3], v[2]], [v[2], v[1], v[0]]]
     }
 }
 
@@ -130,7 +131,7 @@ fn main() {
 
     let points_pipeline = PipelineConfiguration::new(include_str!("spheres.wgsl"))
         .with(light::<CameraViewProjectUniform>())
-        .with_vertices(spheres.iter().flat_map(Sphere::billboards).flatten().collect());
+        .with(Quads::join(spheres.iter().map(Sphere::billboards)).triangles().vertices());
 
     RenderConfiguration::new(vec![
         // RenderPassConfiguration::new(vec![faces_pipeline]),

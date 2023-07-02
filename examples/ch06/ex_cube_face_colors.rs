@@ -9,7 +9,6 @@ fn main() {
     let quads = create_cube(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors);
     PipelineConfiguration::new(include_str!("cube_face_colors.wgsl"))
         .with(MvpController::example(()))
-        .with_vertices(quads.triangles().vertices())
-        .with_topology(wgpu::PrimitiveTopology::TriangleList)
+        .with(quads.triangles().vertices())
         .run_title("Chapter 6 Solid face colors cube");
 }

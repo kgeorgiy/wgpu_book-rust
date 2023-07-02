@@ -45,12 +45,13 @@ fn main() {
     let angle = Rad::full_turn() / 16.0;
     let model = create_rotation([angle, angle, angle]);
     let camera = Camera::new((0.0, 0.0, -5.0), Deg(90.0), Deg(0.0));
+    let cube = FACE_COLORS_CUBE;
     PipelineConfiguration::new(include_str!("cube_face_colors.wgsl"))
         .with(MvpController::from_model_view(model, camera.view(), Deg(90.0).into(), CameraState {
             camera,
             camera_controller: CameraController::new(0.005),
             mouse_pressed: false,
         }))
-        .with_vertices(create_cube(FACE_COLORS_CUBE.positions, FACE_COLORS_CUBE.colors).triangles().vertices())
+        .with(create_cube(cube.positions, cube.colors).triangles().vertices())
         .run_title("Chapter 6 Controlled camera");
 }

@@ -12,21 +12,24 @@ pub mod surface_data;
 pub mod mvp;
 mod vertex;
 
-pub(crate) struct CmdArgs;
+pub struct CmdArgs;
 
 thread_local!(static ARGS: RefCell<Vec<String>> = RefCell::new(std::env::args().skip(1).rev().collect()));
 
 impl CmdArgs {
-    pub(crate) fn next(default: &str) -> String {
+    #[must_use]
+    pub fn next(default: &str) -> String {
         ARGS.with(|cell| cell.borrow_mut().pop().unwrap_or(default.to_owned()))
     }
 
-    pub(crate) fn next_known(description: &str, known: &[&str]) -> String {
+    #[must_use]
+    pub fn next_known(description: &str, known: &[&str]) -> String {
         let value = Self::next(known.first().expect("at least one known variant"));
         assert!(known.iter().any(|k| value == *k), "{description}: unknown argument '{value}', expected one of {known:?}");
         value
     }
 
+    #[must_use]
     pub fn next_bool(description: &str, default: bool) -> bool {
         let known = if default { ["true", "false"] } else { ["false", "true"] };
         CmdArgs::next_known(description, &known).parse().expect("true of false")

@@ -4,6 +4,7 @@ use core::f32::consts::PI;
 use core::iter::zip;
 
 use cgmath::{Array, ElementWise, InnerSpace, Point3, point3, Vector3};
+use wgpu::PrimitiveTopology;
 
 use webgpu_book::{Configurator, func_box, PipelineConfiguration, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
@@ -275,11 +276,6 @@ impl<V, const L: usize> Mesh<V, L> {
     pub fn cast<U>(self) -> Mesh<U, L> where V: Into<U> {
         self.map(V::into)
     }
-
-    #[must_use]
-    pub fn vertices(self) -> Vec<V> {
-        self.into()
-    }
 }
 
 impl<V, const L: usize> IntoIterator for Mesh<V, L>{
@@ -318,6 +314,7 @@ impl<V: Copy> Quads<V> {
     }
 }
 
+//
 // Edges
 
 pub type Edges<V> = Mesh<V, 2>;
@@ -327,12 +324,18 @@ impl<V: VertexBufferInfo> Edges<V> {
         let shader_string = shader_source.to_owned();
         func_box!(move |config: PipelineConfiguration| config
             .with_shader(shader_string.as_str())
-            .with_vertices(self.vertices())
-            .with_topology(wgpu::PrimitiveTopology::LineList))
+            .with(self.vertices()))
+    }
+
+    pub fn vertices(self) -> Configurator<PipelineConfiguration> {
+        func_box!(|pipeline: PipelineConfiguration|
+            pipeline
+                .with_vertices::<V>(self.into(), PrimitiveTopology::LineList)
+        )
     }
 }
 
-impl Mesh<Vertex, 2> {
+impl Edges<Vertex> {
     pub fn into_config(self) -> PipelineConfiguration {
         PipelineConfiguration::new("").with(self.conf_shader(include_str!("../ch06/line3d.wgsl")))
     }
@@ -359,6 +362,15 @@ impl<V, U> From<Triangles<V>> for Edges<U> where U: Copy, V: Into<U> {
 //
 // Triangles
 pub type Triangles<V> = Mesh<V, 3>;
+
+impl<V: VertexBufferInfo> Triangles<V>{
+    pub fn vertices(self) -> Configurator<PipelineConfiguration> {
+        func_box!(|pipeline: PipelineConfiguration|
+            pipeline
+                .with_vertices::<V>(self.into(), PrimitiveTopology::TriangleList)
+        )
+    }
+}
 
 impl<V, U> From<Quads<V>> for Triangles<U> where U: Copy, V: Into<U> {
     fn from(quads: Quads<V>) -> Self {

@@ -167,7 +167,7 @@ impl LightExamples {
             if CmdArgs::is("wireframe") {
                 config.with(Self::wireframe(triangles, 0.1))
             } else {
-                config.with_vertices(triangles.vertices())
+                config.with(triangles.vertices())
             }
         )
     }
@@ -182,8 +182,8 @@ impl LightExamples {
             .collect();
         if normal_len > 0.0 {
             edges.extend(
-                mapped.vertices().iter()
-                    .map(|vertex| [*vertex, vertex.normal_vertex(normal_len)])
+                Vec::from(mapped).iter()
+                    .map(|vertex: &VertexN| [*vertex, vertex.normal_vertex(normal_len)])
             );
         }
 

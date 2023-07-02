@@ -52,6 +52,5 @@ pub fn multi_pipeline(surface: &Surface, instances: bool) -> PipelineConfigurati
 pub fn edges_pipeline(edges: Edges<VertexC>) -> PipelineConfiguration {
     PipelineConfiguration::new(include_str!("mesh.wgsl"))
         .with(TwoSideLightAux::read_args())
-        .with_vertices(edges.vertices())
-        .with_topology(wgpu::PrimitiveTopology::LineList)
+        .with(edges.vertices())
 }

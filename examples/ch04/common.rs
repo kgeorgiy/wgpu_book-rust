@@ -21,6 +21,6 @@ impl VertexBufferInfo for Vertex {
 
 pub fn run_example(title: &str, vertices: Vec<Vertex>, indices: Option<&[u16]>) -> ! {
     PipelineConfiguration::new(include_str!("triangle.wgsl"))
-        .with_vertices_indices(vertices, indices)
+        .with_vertices_indices(vertices, indices, wgpu::PrimitiveTopology::TriangleList)
         .run_title(title);
 }

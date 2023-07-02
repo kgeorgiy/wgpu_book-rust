@@ -24,8 +24,7 @@ pub fn run_example<V: VertexBufferInfo>(
 ) {
     PipelineConfiguration::new(shader_source)
         .with(MvpController::example(()))
-        .with_vertices_indices(vertices, indices)
-        .with_topology(topology)
+        .with_vertices_indices(vertices, indices, topology)
         .run_title(title);
 }
 

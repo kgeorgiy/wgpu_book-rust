@@ -104,31 +104,37 @@ impl PipelineConfiguration {
         self
     }
 
-    pub fn with_indexed_vertices<V, I>(mut self, vertices: Vec<V>, indices: &[I])
+    pub fn with_indexed_vertices<V, I>(mut self, vertices: Vec<V>, indices: &[I], topology: wgpu::PrimitiveTopology)
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
         self.indices = Some(I::buffer("Indices", indices));
         self
-            .with_vertices(vertices)
+            .with_vertices(vertices, topology)
             .with_vertex_count(indices.len())
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    pub fn with_vertices<V: VertexBufferInfo>(mut self, vertices: Vec<V>) -> Self {
+    pub fn with_vertices<V: VertexBufferInfo>(
+        mut self,
+        vertices: Vec<V>,
+        topology: wgpu::PrimitiveTopology
+    ) -> Self {
         self.vertices = vec![V::buffer("Vertices", &vertices)];
-        self.with_vertex_count(vertices.len())
+        self
+            .with_topology(topology)
+            .with_vertex_count(vertices.len())
     }
 
-    pub fn with_vertices_indices<V, I>(self, vertices: Vec<V>, indices: Option<&[I]>)
+    pub fn with_vertices_indices<V, I>(self, vertices: Vec<V>, indices: Option<&[I]>, topology: wgpu::PrimitiveTopology)
         -> Self where V: VertexBufferInfo, I: IndexBufferInfo
     {
         match indices {
-            None => self.with_vertices(vertices),
-            Some(idx) => self.with_indexed_vertices(vertices, idx),
+            None => self.with_vertices(vertices, topology),
+            Some(idx) => self.with_indexed_vertices(vertices, idx, topology),
         }
     }
 
-    pub fn with_topology(mut self, topology: wgpu::PrimitiveTopology) -> Self {
+    fn with_topology(mut self, topology: wgpu::PrimitiveTopology) -> Self {
         self.topology = topology;
         self
     }
