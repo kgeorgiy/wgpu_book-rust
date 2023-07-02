@@ -1,14 +1,3 @@
-struct ModelUniforms {
-    points: mat4x4<f32>,
-    normals: mat4x4<f32>,
-}
-@group(0) @binding(0) var<uniform> model_u: ModelUniforms;
-
-struct CameraUniforms {
-    view_project: mat4x4<f32>,
-}
-@group(0) @binding(1) var<uniform> camera_u: CameraUniforms;
-
 struct Output {
     @builtin(position) position: vec4<f32>,
     @location(0) v_position: vec4<f32>,
@@ -18,7 +7,7 @@ struct Output {
 }
 
 @vertex
-fn vs_main(in: VertexNT) -> Output {
+fn vs_main(in: VertexNCT) -> Output {
     let position: vec4<f32> = model_u.points * in.position;
 
     var output: Output;
@@ -30,48 +19,16 @@ fn vs_main(in: VertexNT) -> Output {
     return output;
 }
 
-struct FragmentUniforms {
-    light_position: vec4<f32>,
-    eye_position: vec4<f32>,
-}
-@group(0) @binding(2) var<uniform> fragment_u: FragmentUniforms;
-
-struct LightUniforms {
-    specular_color: vec4<f32>,
-    ambient_intensity: f32,
-    diffuse_intensity: f32,
-    specular_intensity: f32,
-    specular_shininess: f32,
+struct TwoSideLightAux {
     is_two_side: i32,
 }
-@group(0) @binding(3) var<uniform> light_u: LightUniforms;
 
-fn diffuse(dotNL: f32) -> f32 {
-    return light_u.diffuse_intensity * max(dotNL, 0.0);
-}
-
-fn specular(dotNH: f32) -> f32 {
-    return light_u.specular_intensity * pow(max(dotNH, 0.0), light_u.specular_shininess);
-}
-
-fn color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> {
-    let N: vec3<f32> = normalize(normal.xyz);
-    let L: vec3<f32> = normalize(fragment_u.light_position.xyz - position.xyz);
-    let V: vec3<f32> = normalize(fragment_u.eye_position.xyz - position.xyz);
-    let H: vec3<f32> = normalize(L + V);
-    let dotNL = dot(N, L);
-    let dotNH = dot(N, H);
-
-    var diffuse: f32 = diffuse(dotNL);
-    var specular: f32 = specular(dotNH);
-
-    if (light_u.is_two_side != 0) {
-        diffuse += 0.5 * diffuse(-dotNL);
-        specular += 0.5 * specular(-dotNH);
+fn two_side_color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> {
+    var back: f32;
+    if (light_u.aux.is_two_side != 0) {
+        back = 0.5;
     }
-
-    let ambient = light_u.ambient_intensity;
-    return vec4(color * (ambient + diffuse) + light_u.specular_color.xyz * specular, 1.0);
+    return color_both(position, normal, color, back);
 }
 
 @group(1) @binding(0) var texture_data: texture_2d<f32>;

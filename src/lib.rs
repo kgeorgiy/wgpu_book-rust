@@ -120,7 +120,6 @@ impl PipelineConfiguration {
         topology: wgpu::PrimitiveTopology
     ) -> Self {
         self.vertices = vec![(V::buffer("Vertices", &vertices), V::struct_declaration())];
-        println!("{}", V::struct_declaration());
         self
             .with_topology(topology)
             .with_vertex_count(vertices.len())

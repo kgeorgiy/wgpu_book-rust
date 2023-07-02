@@ -4,10 +4,10 @@ use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, Point3, point3, Rad, SquareMatrix, vec3, Vector3, Zero};
 use rand::{Rng, SeedableRng};
 
-use webgpu_book::{Configurator, PipelineConfiguration, RenderConfiguration, RenderPassConfiguration, To, VertexBufferInfo};
+use webgpu_book::{Configurator, PipelineConfiguration, RenderConfiguration, RenderPassConfiguration, To, UniformInfo, VertexBufferInfo};
 
 use crate::common::{VertexN, VertexNC};
-use crate::common::light::{CameraUniform, LightExamples, LightUniforms, Model, OglCamera};
+use crate::common::light::{MergedVPUniform, LightExamples, LightUniform, Model, OglCamera};
 use crate::common::surface_data::{Edges, Quads};
 use crate::common::vertex_data::sphere_quads;
 
@@ -69,13 +69,22 @@ pub struct CameraViewProjectUniform {
     project: [[f32; 4]; 4],
 }
 
+impl UniformInfo for CameraViewProjectUniform {
+    const STRUCT_NAME: &'static str = "CameraViewProjectUniform";
+    const BINDING_NAME: &'static str = "camera_u";
+    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
+        ("view", "mat4x4<f32>"),
+        ("project", "mat4x4<f32>"),
+    ];
+}
+
 impl To<CameraViewProjectUniform> for OglCamera {
     fn to(&self) -> CameraViewProjectUniform {
         CameraViewProjectUniform { view: self.view().into(), project: self.projection().into() }
     }
 }
 
-fn light<CU: Pod>() -> Configurator<PipelineConfiguration> where OglCamera: To<CU>{
+fn light<CU: UniformInfo>() -> Configurator<PipelineConfiguration> where OglCamera: To<CU>{
     let camera = OglCamera::new(
         point3(3.0, 1.5, 3.0),
         point3(0.0, 0.0, 0.0),
@@ -87,7 +96,7 @@ fn light<CU: Pod>() -> Configurator<PipelineConfiguration> where OglCamera: To<C
         [Model::new(Matrix4::identity())],
         true,
         camera.clone(),
-        LightUniforms::example(()),
+        LightUniform::example(()),
         1.0
     )
 }
@@ -99,7 +108,7 @@ fn main() {
 
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(12345);
 
-    let spheres: Vec<Sphere> = (0..10)
+    let spheres: Vec<Sphere> = (0..100)
         .map(|_| {
             Sphere {
                 center: (point3(rng.gen(), rng.gen(), rng.gen()) * 2.0 - ONES) * SCALE,
@@ -132,7 +141,7 @@ fn main() {
 
     let _edges_pipeline = PipelineConfiguration::new(include_str!("../common/wireframe.wgsl"))
         .with(quads.cast::<VertexN>().edges().vertices())
-        .with(light::<CameraUniform>());
+        .with(light::<MergedVPUniform>());
 
     let _points_pipeline = PipelineConfiguration::new(include_str!("spheres.wgsl"))
         .with(light::<CameraViewProjectUniform>())
@@ -140,8 +149,8 @@ fn main() {
 
     RenderConfiguration::new(vec![
         RenderPassConfiguration::new(vec![_faces_pipeline]),
-        RenderPassConfiguration::new(vec![_points_pipeline]),
-        RenderPassConfiguration::new(vec![_edges_pipeline]).with_load(wgpu::LoadOp::Load),
+        // RenderPassConfiguration::new(vec![_points_pipeline]),
+        // RenderPassConfiguration::new(vec![_edges_pipeline]).with_load(wgpu::LoadOp::Load),
     ])
         .run_title("Chapter 0. Spheres");
 }

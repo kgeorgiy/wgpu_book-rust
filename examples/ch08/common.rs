@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::point3;
-use webgpu_book::{PipelineConfiguration, VertexBufferInfo};
+use webgpu_book::{PipelineConfiguration, UniformInfo, VertexBufferInfo};
 
 use crate::common::light::LightExamples;
 use crate::common::surface_data::Triangles;
@@ -14,14 +14,22 @@ mod global_common;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct LightAux {
+pub struct ColorLightAux {
     color: [f32; 4],
 }
 
-impl LightAux {
+impl UniformInfo for ColorLightAux {
+    const STRUCT_NAME: &'static str = "ColorLightAux";
+    const BINDING_NAME: &'static str = "*NoBinding*";
+    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
+        ("color", "vec4<f32>"),
+    ];
+}
+
+impl ColorLightAux {
     #[allow(dead_code)]
     pub fn example<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>) -> PipelineConfiguration {
-        let aux = LightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() };
+        let aux = ColorLightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() };
         PipelineConfiguration::new(include_str!("shader.wgsl"))
             .with(LightExamples::aux(aux))
             .with_cull_mode(None)

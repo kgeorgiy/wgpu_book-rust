@@ -1,6 +1,6 @@
 use core::iter::zip;
 
-use crate::common::{LightAux, VertexN};
+use crate::common::{ColorLightAux, VertexN};
 use crate::common::surface_data::Quads;
 use crate::common::vertex_data::{FACE_COLORS_CUBE, i8_as_f32};
 
@@ -15,6 +15,6 @@ fn create_quads() -> Quads<VertexN> {
 }
 
 fn main() {
-    LightAux::example(create_quads().triangles())
+    ColorLightAux::example(create_quads().triangles())
         .run_title("Chapter 8. Cube");
 }

@@ -1,8 +1,9 @@
 use core::time::Duration;
+use bytemuck::{Pod, Zeroable};
 
 use cgmath::{Deg, Matrix4, Point3, Rad, SquareMatrix, Vector3};
 
-use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, typed_box, Uniform};
+use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, typed_box, Uniform, UniformInfo};
 use webgpu_book::boxed::FuncBox;
 use webgpu_book::transforms::{create_projection, create_rotation, create_view};
 
@@ -15,11 +16,26 @@ struct Mvp {
     projection: Matrix4<f32>,
 }
 
-impl To<[[f32; 4]; 4]> for Mvp {
-    fn to(&self) -> [[f32; 4]; 4] {
-        (self.projection * self.view * self.model).into()
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+struct MvpMatrix {
+    matrix: [[f32; 4]; 4],
+}
+
+impl UniformInfo for MvpMatrix {
+    const STRUCT_NAME: &'static str = "MvpMatrix";
+    const BINDING_NAME: &'static str = "mvp_u";
+    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
+        ("matrix", "mat4x4<f32>"),
+    ];
+}
+
+impl To<MvpMatrix> for Mvp {
+    fn to(&self) -> MvpMatrix {
+        MvpMatrix{ matrix: (self.projection * self.view * self.model).into() }
     }
 }
+
 
 
 // MvpController

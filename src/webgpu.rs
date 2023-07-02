@@ -265,7 +265,12 @@ impl Pipeline {
                 .map(|buffer| buffer.format.clone())
                 .collect::<Vec<_>>(),
             &[&uniforms.variants.layout, &textures.variants.layout],
-            format!("{}\n\n{}", vertex_decls.join("\n\n"), conf.shader_source).as_str(),
+            format!(
+                "{}\n{}\n{}",
+                vertex_decls.join("\n"),
+                uniforms.declarations,
+                conf.shader_source
+            ).as_str(),
             wgpu::PrimitiveState {
                 topology: conf.topology,
                 strip_index_format: conf.strip_index_format,
@@ -298,6 +303,7 @@ impl Pipeline {
         primitive: wgpu::PrimitiveState,
         depth_stencil: Option<wgpu::DepthStencilState>,
     ) -> wgpu::RenderPipeline {
+        // println!("==========\n{shader_source}\n==========");
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(shader_source)),
