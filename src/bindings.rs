@@ -65,6 +65,7 @@ impl BindGroupVariants {
 //
 // TextureInfo
 
+#[must_use]
 pub struct TextureInfo {
     pub file: String,
     pub u_mode: wgpu::AddressMode,
@@ -72,7 +73,7 @@ pub struct TextureInfo {
 }
 
 impl TextureInfo {
-    #[must_use] pub fn repeated(file: String) -> Self {
+    pub fn repeated(file: String) -> Self {
         TextureInfo {
             file,
             u_mode: wgpu::AddressMode::Repeat,

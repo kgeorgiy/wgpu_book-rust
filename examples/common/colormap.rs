@@ -4,17 +4,18 @@ use cgmath::Point3;
 
 #[derive(Clone)]
 #[allow(dead_code)]
+#[must_use]
 pub struct Colormap {
     colors: Vec<Point3<f32>>,
 }
 
 #[allow(dead_code)]
 impl Colormap {
-    #[must_use] pub fn new(colors: &[[f32; 3]]) -> Self {
+    pub fn new(colors: &[[f32; 3]]) -> Self {
         Self { colors: colors.iter().map(|color| Point3::from(*color)).collect() }
     }
 
-    #[must_use] pub fn by_name(name: &str) -> Self {
+    pub fn by_name(name: &str) -> Self {
         let colormap = match name {
             "hsv" => [[1.0, 0.0, 0.0], [1.0, 0.5, 0.0], [0.97, 1.0, 0.01], [0.0, 0.99, 0.04], [0.0, 0.98, 0.52], [0.0, 0.98, 1.0], [0.01, 0.49, 1.0], [0.03, 0.0, 0.99], [1.0, 0.0, 0.96], [1.0, 0.0, 0.49], [1.0, 0.0, 0.02]],
             "hot" => [[0.0, 0.0, 0.0], [0.3, 0.0, 0.0], [0.6, 0.0, 0.0], [0.9, 0.0, 0.0], [0.93, 0.27, 0.0], [0.97, 0.55, 0.0], [1.0, 0.82, 0.0], [1.0, 0.87, 0.25], [1.0, 0.91, 0.5], [1.0, 0.96, 0.75], [1.0, 1.0, 1.0]],
@@ -32,10 +33,11 @@ impl Colormap {
         Self::new(&colormap)
     }
 
-    #[must_use] pub fn interpolator(&self, min_max: (f32, f32)) -> ColormapInterpolator {
+    pub fn interpolator(&self, min_max: (f32, f32)) -> ColormapInterpolator {
         ColormapInterpolator { colormap: self, min_max }
     }
 
+    #[must_use]
     fn interpolate(&self, value: f32, (min, max): (f32, f32)) -> Point3<f32> {
         #![allow(clippy::indexing_slicing)]
         let tn = (value.clamp(min, max) - min) / (max - min);
@@ -60,6 +62,7 @@ impl Colormap {
 // ColorInterpolator
 
 #[allow(dead_code)]
+#[must_use]
 pub struct ColormapInterpolator<'a> {
     colormap: &'a Colormap,
     min_max: (f32, f32),
@@ -67,7 +70,8 @@ pub struct ColormapInterpolator<'a> {
 
 #[allow(dead_code)]
 impl<'a> ColormapInterpolator<'a> {
-    #[must_use] pub fn interpolate(&self, value: f32) -> Point3<f32> {
+    #[must_use]
+    pub fn interpolate(&self, value: f32) -> Point3<f32> {
         self.colormap.interpolate(value, self.min_max)
     }
 }

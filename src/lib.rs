@@ -17,12 +17,12 @@ mod uniforms;
 //
 // RenderConfiguration
 
+#[must_use]
 pub struct RenderConfiguration {
     render_passes: Vec<RenderPassConfiguration>,
 }
 
 impl RenderConfiguration {
-    #[must_use]
     pub fn new(passes: Vec<RenderPassConfiguration>) -> Self {
         Self { render_passes: passes }
     }
@@ -35,6 +35,7 @@ impl RenderConfiguration {
 //
 // RenderPassConfiguration
 
+#[must_use]
 pub struct RenderPassConfiguration {
     pipelines: Vec<PipelineConfiguration>,
     load: wgpu::LoadOp<wgpu::Color>,
@@ -46,7 +47,6 @@ impl RenderPassConfiguration {
         RenderConfiguration::new(vec![self]).run_title(title)
     }
 
-    #[must_use]
     pub fn new(pipelines: Vec<PipelineConfiguration>) -> Self {
         Self {
             pipelines,
@@ -55,13 +55,11 @@ impl RenderPassConfiguration {
         }
     }
 
-    #[must_use]
     pub fn with_load(mut self, load: wgpu::LoadOp<wgpu::Color>) -> Self {
         self.load = load;
         self
     }
 
-    #[must_use]
     pub fn with_depth(mut self, format: Option<wgpu::TextureFormat>) -> Self {
         self.depth = format.map(|frm| DepthConfiguration { format: frm });
         self
@@ -170,7 +168,6 @@ impl PipelineConfiguration {
         self
     }
 
-    #[must_use]
     pub fn uniforms(&mut self) -> &mut UniformsConfiguration {
         &mut self.uniforms
     }

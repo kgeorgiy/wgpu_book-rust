@@ -16,6 +16,7 @@ use super::surface_data::Triangles;
 // Camera
 
 #[derive(Clone)]
+#[must_use]
 pub struct OglCamera {
     eye: Point3<f32>,
     look_at: Point3<f32>,
@@ -25,7 +26,6 @@ pub struct OglCamera {
 }
 
 impl OglCamera {
-    #[must_use]
     pub fn new(eye: Point3<f32>, look_at: Point3<f32>, up: Vector3<f32>, fovy: Rad<f32>) -> Self {
         Self { eye, look_at, up, fovy, projection: create_projection(1.0, fovy) }
     }
@@ -51,13 +51,14 @@ impl OglCamera {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
+#[must_use]
 pub struct FragmentUniforms {
     light_position: [f32; 4],
     eye_position: [f32; 4],
 }
 
 impl FragmentUniforms {
-    #[must_use] pub fn new(eye: [f32; 4], light: [f32; 4]) -> Self {
+    pub fn new(eye: [f32; 4], light: [f32; 4]) -> Self {
         Self { eye_position: eye, light_position: light }
     }
 }
@@ -67,6 +68,7 @@ impl FragmentUniforms {
 
 #[repr(C, packed)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
+#[must_use]
 pub struct LightUniforms<A> {
     specular_color: [f32; 4],
     pub(crate) ambient_intensity: f32,
@@ -109,19 +111,21 @@ impl<A> LightUniforms<A> {
 // Model, ModelUniforms
 
 #[derive(Clone, Debug)]
+#[must_use]
 pub struct Model {
     model: Matrix4<f32>,
     rotation: Matrix4<f32>,
 }
 
 impl Model {
-    #[must_use] pub fn new(model: Matrix4<f32>) -> Self {
+    pub fn new(model: Matrix4<f32>) -> Self {
         Self { model, rotation: Matrix4::identity() }
     }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
+#[must_use]
 pub struct ModelUniforms {
     points: [[f32; 4]; 4],
     vectors: [[f32; 4]; 4],
@@ -142,6 +146,7 @@ impl To<ModelUniforms> for Model {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
+#[must_use]
 pub struct CameraUniform {
     view_project: [[f32; 4]; 4],
 }
@@ -157,7 +162,7 @@ impl To<CameraUniform> for OglCamera {
 pub struct LightExamples;
 
 impl LightExamples {
-    pub fn read_args_wireframe<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>) -> FuncBox<PipelineConfiguration, PipelineConfiguration> {
+    pub fn read_args_wireframe<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>) -> Configurator<PipelineConfiguration> {
         func_box!(move |config: PipelineConfiguration|
             if CmdArgs::is("wireframe") {
                 config.with(Self::wireframe(triangles, 0.1))
@@ -208,7 +213,7 @@ impl LightExamples {
         camera: OglCamera,
         light: LightUniforms<LA>,
         animation_speed: f32
-    ) -> FuncBox<PipelineConfiguration, PipelineConfiguration> where OglCamera: To<CU> {
+    ) -> Configurator<PipelineConfiguration> where OglCamera: To<CU> {
         func_box!(move |pipeline: PipelineConfiguration| {
             Self::configure::<ML, LA, CU>(pipeline, models, instances, camera, light, animation_speed)
         })

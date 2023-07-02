@@ -75,6 +75,7 @@ impl UniformConfig {
 //
 // UniformsConfiguration and UniformAdd
 
+#[must_use]
 pub struct UniformsConfiguration {
     uniforms: Vec<UniformConfig>,
     variants: Vec<Vec<usize>>,

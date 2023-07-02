@@ -4,8 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, Point3, point3, Rad, SquareMatrix, vec3, Vector3, Zero};
 use rand::{Rng, SeedableRng};
 
-use webgpu_book::{PipelineConfiguration, RenderConfiguration, RenderPassConfiguration, To, VertexBufferInfo};
-use webgpu_book::boxed::FuncBox;
+use webgpu_book::{Configurator, PipelineConfiguration, RenderConfiguration, RenderPassConfiguration, To, VertexBufferInfo};
 
 use crate::common::{VertexN, VertexNC};
 use crate::common::light::{LightExamples, LightUniforms, Model, OglCamera};
@@ -73,7 +72,7 @@ impl To<CameraViewProjectUniform> for OglCamera {
     }
 }
 
-fn light<CU: Pod>() -> FuncBox<PipelineConfiguration, PipelineConfiguration> where OglCamera: To<CU>{
+fn light<CU: Pod>() -> Configurator<PipelineConfiguration> where OglCamera: To<CU>{
     let camera = OglCamera::new(
         point3(3.0, 1.5, 3.0),
         point3(0.0, 0.0, 0.0),
