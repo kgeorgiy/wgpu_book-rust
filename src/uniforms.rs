@@ -1,5 +1,6 @@
 use core::cell::RefCell;
 use core::ops::{Deref, DerefMut};
+use core::mem::size_of;
 use std::rc::Rc;
 
 use bytemuck::Pod;
@@ -132,14 +133,18 @@ impl<'a, T> UniformAdd<'a, T> {
     }
 
     fn build<B>(self, cast: fn(&T) -> Vec<B>, write: fn(&T, &BufferWriter)) -> Uniform<T> where B: UniformInfo {
-        let buffer = B::buffer_format(self.label.as_str(), &cast(&self.value), self.stages);
-        let uniform = Uniform::new(self.value, write);
-        self.uniforms.push(UniformConfig {
-            buffer,
-            writer: uniform.buffer.clone(),
-            declaration: |i| B::uniform_declaration(i),
-        });
-        uniform
+        if size_of::<B>() > 0 {
+            let buffer = B::buffer_format(self.label.as_str(), &cast(&self.value), self.stages);
+            let uniform = Uniform::new(self.value, write);
+            self.uniforms.push(UniformConfig {
+                buffer,
+                writer: uniform.buffer.clone(),
+                declaration: |i| B::uniform_declaration(i),
+            });
+            uniform
+        } else {
+            Uniform::new(self.value, |_, _| {})
+        }
     }
 
     fn cast_value<B>(value: &T) -> Vec<B> where T: To<B>, B: Pod {
