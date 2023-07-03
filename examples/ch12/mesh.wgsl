@@ -11,10 +11,6 @@ fn vs_main(in: VertexC) -> Output {
     return output;
 }
 
-struct TwoSideLightAux {
-    is_two_side: i32,
-}
-
 @fragment
 fn fs_main(in: Output) -> @location(0) vec4<f32> {
     return in.v_color;

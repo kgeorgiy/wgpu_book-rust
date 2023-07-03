@@ -3,7 +3,7 @@ use cgmath::{Matrix4, SquareMatrix, vec3};
 use webgpu_book::{PipelineConfiguration, TextureInfo};
 
 use crate::common::colormap::Colormap;
-use crate::common::light::{LightExamples, TwoSideLightAux};
+use crate::common::light::{LightExamples, TwoSideLight};
 use crate::common::surface_data::{Edges, Surface, Triangles};
 
 pub use self::global_common::*;
@@ -15,7 +15,7 @@ pub fn example_models<const T: usize>(triangles: Triangles<VertexNCT>, models: [
     let texture_file = CmdArgs::next("whitesquare2");
     let is_two_side = CmdArgs::next_bool("Is two side", false);
 
-    let light_aux = TwoSideLightAux::new(is_two_side);
+    let light_aux = TwoSideLight::new(is_two_side);
 
     let shader_source = include_str!("instances.wgsl");
     PipelineConfiguration::new(shader_source)
@@ -51,6 +51,6 @@ pub fn multi_pipeline(surface: &Surface, instances: bool) -> PipelineConfigurati
 #[allow(dead_code)]
 pub fn edges_pipeline(edges: Edges<VertexC>) -> PipelineConfiguration {
     PipelineConfiguration::new(include_str!("mesh.wgsl"))
-        .with(TwoSideLightAux::read_args())
+        .with(TwoSideLight::read_args())
         .with(edges.vertices())
 }

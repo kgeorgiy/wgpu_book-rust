@@ -4,7 +4,7 @@ use webgpu_book::RenderPassConfiguration;
 
 use crate::common::VertexNC;
 use crate::common::colormap::Colormap;
-use crate::common::light::TwoSideLightAux;
+use crate::common::light::TwoSideLight;
 use crate::common::surface_data::Surface;
 
 mod common;
@@ -17,7 +17,7 @@ fn main() -> ! {
 
     let edges = common::edges_pipeline(surface.edges(point3(1.0, 1.0, 1.0)).cast());
 
-    let triangles = TwoSideLightAux::example(
+    let triangles = TwoSideLight::example(
         include_str!("../ch09/shader.wgsl"),
         surface.triangles(colormap, false).cast::<VertexNC>()
     );

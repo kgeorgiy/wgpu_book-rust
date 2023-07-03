@@ -3,7 +3,7 @@
 use core::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Angle, InnerSpace, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3, Zero};
+use cgmath::{Angle, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3, Vector4, Zero};
 
 use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, Uniform, UniformInfo, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
@@ -40,93 +40,70 @@ impl OglCamera {
         self.projection
     }
 
+    #[must_use]
+    pub fn eye(&self) -> Vector4<f32> {
+        self.eye.to_homogeneous()
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) -> Matrix4<f32> {
         self.projection = create_projection(width as f32 / height as f32, self.fovy);
         self.projection
     }
 }
 
-
-// FragmentUniforms
+// Light
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 #[must_use]
-pub struct LightEyeUniform {
-    light_position: [f32; 4],
-    eye_position: [f32; 4],
-}
-
-impl UniformInfo for LightEyeUniform {
-    const STRUCT_NAME: &'static str = "LightEyeUniform";
-    const BINDING_NAME: &'static str = "fragment_u";
-    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
-        ("light_position", "vec4<f32>"),
-        ("eye_position", "vec4<f32>"),
-    ];
-}
-
-
-impl LightEyeUniform {
-    pub fn new(eye: [f32; 4], light: [f32; 4]) -> Self {
-        Self { eye_position: eye, light_position: light }
-    }
-}
-
-
-// Light
-
-#[repr(C, packed)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-#[must_use]
-pub struct LightUniform<A> {
+pub struct LightUniform{
+    position: [f32; 4],
     specular_color: [f32; 4],
-    pub(crate) ambient_intensity: f32,
-    pub(crate) diffuse_intensity: f32,
-    pub(crate) specular_intensity: f32,
-    pub(crate) specular_shininess: f32,
-    pub(crate) aux: A,
+    ambient_intensity: f32,
+    diffuse_intensity: f32,
+    specular_intensity: f32,
+    specular_shininess: f32,
 }
 
-impl<A: UniformInfo> UniformInfo for LightUniform<A> {
+impl UniformInfo for LightUniform {
     const STRUCT_NAME: &'static str = "LightUniform";
     const BINDING_NAME: &'static str = "light_u";
     const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
+        ("position", "vec4<f32>"),
         ("specular_color", "vec4<f32>"),
         ("ambient_intensity", "f32"),
         ("diffuse_intensity", "f32"),
         ("specular_intensity", "f32"),
         ("specular_shininess", "f32"),
-        ("aux", A::STRUCT_NAME),
     ];
     const FUNCTIONS: &'static str = include_str!("light-functions.wgsl");
 }
 
 
-impl<A> LightUniform<A> {
+impl LightUniform {
     pub fn new(
+        position: Point3<f32>,
         specular_color: Point3<f32>,
         ambient_intensity: f32,
         diffuse_intensity: f32,
         specular_intensity: f32,
         specular_shininess: f32,
-        aux: A,
     ) -> Self {
         Self {
+            position: position.to_homogeneous().into(),
             specular_color: specular_color.to_homogeneous().into(),
             ambient_intensity,
             diffuse_intensity,
             specular_intensity,
             specular_shininess,
-            aux,
         }
     }
 
-    pub fn example(aux: A) -> LightUniform<A> {
+    pub fn example() -> LightUniform {
         LightUniform::new(
+            point3(10.0, 0.0, 0.0),
             point3(1.0, 1.0, 0.0),
             0.1, 1.0, 2.0, 30.0,
-            aux
         )
     }
 }
@@ -183,17 +160,24 @@ impl To<ModelUniforms> for Model {
 #[must_use]
 pub struct MergedVPUniform {
     view_project: [[f32; 4]; 4],
+    eye: [f32; 4],
 }
 
 impl UniformInfo for MergedVPUniform {
     const STRUCT_NAME: &'static str = "MergedVPUniform";
     const BINDING_NAME: &'static str = "camera_u";
-    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[("view_project", "mat4x4<f32>")];
+    const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
+        ("view_project", "mat4x4<f32>"),
+        ("eye", "vec4<f32>")
+    ];
 }
 
 impl To<MergedVPUniform> for OglCamera {
     fn to(&self) -> MergedVPUniform {
-        MergedVPUniform { view_project: (self.projection() * self.view()).into() }
+        MergedVPUniform {
+            view_project: (self.projection() * self.view()).into(),
+            eye: self.eye().into(),
+        }
     }
 }
 
@@ -231,53 +215,49 @@ impl LightExamples {
             .conf_shader(include_str!("wireframe.wgsl"))
     }
 
-    pub fn models<const ML: usize, LA>(
-        light_aux: LA,
+    pub fn models<const ML: usize, AU>(
+        aux: AU,
         models: [Matrix4<f32>; ML],
         instances: bool
-    ) -> Configurator<PipelineConfiguration> where LA: UniformInfo {
+    ) -> Configurator<PipelineConfiguration> where AU: UniformInfo {
         let camera = OglCamera::new(
-            point3(3.0, 1.5, 3.0),
+            point3(3.0, 1.5, 4.0),
             point3(0.0, 0.0, 0.0),
             Vector3::unit_y(),
             Rad::full_turn() / 5.0,
         );
-        Self::configurator::<ML, LA, MergedVPUniform>(
+        Self::configurator::<ML, AU, MergedVPUniform>(
             models.map(Model::new),
             instances,
             camera,
-            LightUniform::example(light_aux),
+            LightUniform::example(),
+            aux,
             1.0
         )
     }
 
-    pub fn configurator<const ML: usize, LA, CU>(
+    pub fn configurator<const ML: usize, AU, CU>(
         models: [Model; ML],
         instances: bool,
         camera: OglCamera,
-        light: LightUniform<LA>,
+        light: LightUniform,
+        aux: AU,
         animation_speed: f32
-    ) -> Configurator<PipelineConfiguration> where OglCamera: To<CU>, LA: UniformInfo, CU: UniformInfo {
+    ) -> Configurator<PipelineConfiguration> where OglCamera: To<CU>, AU: UniformInfo, CU: UniformInfo {
         func_box!(move |pipeline: PipelineConfiguration| {
-            Self::configure::<ML, LA, CU>(pipeline, models, instances, camera, light, animation_speed)
+            Self::configure::<ML, AU, CU>(pipeline, models, instances, camera, light, aux, animation_speed)
         })
     }
 
-    fn configure<const ML: usize, LA: UniformInfo, CU: UniformInfo>(
+    fn configure<const ML: usize, AU: UniformInfo, CU: UniformInfo>(
         mut pipeline: PipelineConfiguration,
         models: [Model; ML],
         instances: bool,
         camera: OglCamera,
-        light: LightUniform<LA>,
+        light: LightUniform,
+        aux: AU,
         animation_speed: f32,
     ) -> PipelineConfiguration where OglCamera: To<CU> {
-        let forward = (camera.look_at - camera.eye).normalize();
-        let side = forward.cross(camera.up).normalize();
-        let fragment = LightEyeUniform::new(
-            camera.eye.to_homogeneous().into(),
-            (side - forward * 2.0).extend(0.0).into()
-        );
-
         let uniforms = pipeline.uniforms();
 
         let unif = Uniforms {
@@ -296,10 +276,10 @@ impl LightExamples {
             ),
             camera: uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT)
                 .value::<CU>(),
-            fragment: uniforms.add("Fragment", fragment, wgpu::ShaderStages::FRAGMENT)
-                .value::<LightEyeUniform>(),
             light: uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
-                .value::<LightUniform<LA>>(),
+                .value::<LightUniform>(),
+            aux: uniforms.add("Aux", aux, wgpu::ShaderStages::FRAGMENT)
+                .value::<AU>(),
 
             animation_speed,
         };
@@ -307,24 +287,24 @@ impl LightExamples {
         pipeline
     }
 
-    pub fn aux<LA: UniformInfo>(light_aux: LA) -> Configurator<PipelineConfiguration> {
-        Self::models(light_aux, [Matrix4::identity()], true)
+    pub fn aux<AU: UniformInfo>(aux: AU) -> Configurator<PipelineConfiguration> {
+        Self::models(aux, [Matrix4::identity()], true)
     }
 }
 
 // Uniforms
 
 #[allow(dead_code)]
-pub struct Uniforms<const ML: usize, LA: Pod> {
+pub struct Uniforms<const ML: usize, A: Pod> {
     models: Uniform<[Model; ML]>,
     camera: Uniform<OglCamera>,
-    fragment: Uniform<LightEyeUniform>,
-    light: Uniform<LightUniform<LA>>,
+    light: Uniform<LightUniform>,
+    aux: Uniform<A>,
 
     animation_speed: f32,
 }
 
-impl<const ML: usize, LA: Pod> Content for Uniforms<ML, LA> {
+impl<const ML: usize, AU: Pod> Content for Uniforms<ML, AU> {
     fn resize(&mut self, width: u32, height: u32) {
         self.camera.as_mut().resize(width, height);
     }
@@ -347,31 +327,32 @@ impl<const ML: usize, LA: Pod> Content for Uniforms<ML, LA> {
     }
 }
 
-impl<LA: Pod, const ML: usize> Uniforms<ML, LA> {
+impl<AU: Pod, const ML: usize> Uniforms<ML, AU> {
     fn saw(time: f32) -> f32 {
         (time % 1.0 - 0.5).abs() * 2.0
     }
 }
 
 
-// TwoSideLightAux
+// TwoSideLight
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct TwoSideLightAux {
+pub struct TwoSideLight {
     is_two_side: i32,
     padding: [u8; 12],
 }
 
-impl UniformInfo for TwoSideLightAux {
-    const STRUCT_NAME: &'static str = "TwoSideLightAux";
-    const BINDING_NAME: &'static str = "*Invalid*";
+impl UniformInfo for TwoSideLight {
+    const STRUCT_NAME: &'static str = "TwoSideLight";
+    const BINDING_NAME: &'static str = "two_side_light_u";
     const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
         ("is_two_side", "i32"),
     ];
+    const FUNCTIONS: &'static str = include_str!("two-side-functions.wgsl");
 }
 
-impl TwoSideLightAux {
+impl TwoSideLight {
     #[must_use]
     pub fn new(is_two_side: bool) -> Self {
         Self {

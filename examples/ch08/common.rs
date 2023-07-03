@@ -14,22 +14,22 @@ mod global_common;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
-pub struct ColorLightAux {
+pub struct ColorLight {
     color: [f32; 4],
 }
 
-impl UniformInfo for ColorLightAux {
-    const STRUCT_NAME: &'static str = "ColorLightAux";
-    const BINDING_NAME: &'static str = "*NoBinding*";
+impl UniformInfo for ColorLight {
+    const STRUCT_NAME: &'static str = "ColorLight";
+    const BINDING_NAME: &'static str = "color_light_u";
     const ATTRIBUTES: &'static [(&'static str, &'static str)] = &[
         ("color", "vec4<f32>"),
     ];
 }
 
-impl ColorLightAux {
+impl ColorLight {
     #[allow(dead_code)]
     pub fn example<V: VertexBufferInfo + Into<VertexN>>(triangles: Triangles<V>) -> PipelineConfiguration {
-        let aux = ColorLightAux { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() };
+        let aux = ColorLight { color: point3(1.0, 0.0, 0.0).to_homogeneous().into() };
         PipelineConfiguration::new(include_str!("shader.wgsl"))
             .with(LightExamples::aux(aux))
             .with_cull_mode(None)

@@ -12,8 +12,8 @@ fn color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> 
 
 fn color_both(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>, back: f32) -> vec4<f32> {
     let N: vec3<f32> = normalize(normal.xyz);
-    let L: vec3<f32> = normalize(fragment_u.light_position.xyz - position.xyz);
-    let V: vec3<f32> = normalize(fragment_u.eye_position.xyz - position.xyz);
+    let L: vec3<f32> = normalize(light_u.position.xyz - position.xyz);
+    let V: vec3<f32> = normalize(camera_u.eye.xyz - position.xyz);
     let H: vec3<f32> = normalize(L + V);
     let dotNL = dot(N, L);
     let dotNH = dot(N, H);

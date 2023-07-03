@@ -17,18 +17,6 @@ fn vs_main(in: VertexNT) -> Output {
     return output;
 }
 
-struct TwoSideLightAux {
-    is_two_side: i32,
-}
-
-fn two_side_color(position: vec4<f32>, normal: vec4<f32>, color: vec3<f32>) -> vec4<f32> {
-    var back: f32;
-    if (light_u.aux.is_two_side != 0) {
-        back = 0.5;
-    }
-    return color_both(position, normal, color, back);
-}
-
 @group(1) @binding(0) var texture_data: texture_2d<f32>;
 @group(1) @binding(1) var texture_sampler: sampler;
 

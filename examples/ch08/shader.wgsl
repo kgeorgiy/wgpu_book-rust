@@ -15,11 +15,7 @@ fn vs_main(in: VertexN) -> Output {
     return output;
 }
 
-struct ColorLightAux {
-    color: vec4<f32>,
-}
-
 @fragment
 fn fs_main(@location(0) v_position: vec4<f32>, @location(1) v_normal: vec4<f32>) -> @location(0) vec4<f32> {
-    return color(v_position, v_normal, light_u.aux.color.xyz);
+    return color(v_position, v_normal, color_light_u.color.xyz);
 }
