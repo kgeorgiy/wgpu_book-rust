@@ -196,10 +196,11 @@ pub trait UniformInfo: Pod {
     }
 
     #[must_use]
+    #[allow(clippy::pattern_type_mismatch)]
     fn struct_declaration() -> String {
         let attributes = Self::ATTRIBUTES.iter()
-            .filter(|(_, ty)| ty != &"()")
-            .map(|(name, ty)| format!("    {}: {},", name, ty))
+            .filter(|&&(_, ty)| ty != "()")
+            .map(|&(name, ty)| format!("    {name}: {ty},"))
             .collect::<Vec<_>>()
             .join("\n");
 

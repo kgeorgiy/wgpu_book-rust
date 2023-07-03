@@ -20,11 +20,17 @@ mod uniforms;
 #[must_use]
 pub struct RenderConfiguration {
     render_passes: Vec<RenderPassConfiguration>,
+    save_image: Option<String>,
 }
 
 impl RenderConfiguration {
     pub fn new(passes: Vec<RenderPassConfiguration>) -> Self {
-        Self { render_passes: passes }
+        Self { render_passes: passes, save_image: None }
+    }
+
+    pub fn save_images_as(mut self, filename: &str) -> Self {
+        self.save_image = Some(filename.to_owned());
+        self
     }
 
     pub fn run_title(self, title: &str) -> ! {

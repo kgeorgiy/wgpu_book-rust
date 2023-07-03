@@ -14,7 +14,7 @@ pollster = "0.3.0"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 raw-window-handle = "0.5.2"
-wgpu = "0.16.1"
+wgpu = { version = "0.16.1", features = ["expose-ids"] }
 winit = "0.28.6"
 
 [[example]]

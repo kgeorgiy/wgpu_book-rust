@@ -1,5 +1,8 @@
+use core::mem::size_of;
 use core::time::Duration;
+use core::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Result;
 
@@ -60,6 +63,19 @@ impl WebGPUDevice {
         self.surface_config.height = height;
         self.surface.configure(&self.device, &self.surface_config);
     }
+
+    fn create_texture(&self, label: &str, width: u32, height: u32, usage: wgpu::TextureUsages, format: wgpu::TextureFormat) -> wgpu::Texture {
+        self.device.create_texture(&wgpu::TextureDescriptor {
+            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage,
+            label: Some(label),
+            view_formats: &[],
+        })
+    }
 }
 
 //
@@ -68,6 +84,7 @@ impl WebGPUDevice {
 pub(crate) struct WebGPURender {
     wg: WebGPUDevice,
     render_passes: Vec<RenderPass>,
+    save_image: Option<SaveImage>,
 }
 
 impl WebGPURender {
@@ -77,35 +94,49 @@ impl WebGPURender {
 
     pub async fn content_async<'a>(
         window: &dyn RawWindow,
-        render_conf: RenderConfiguration,
+        conf: RenderConfiguration,
     ) -> Result<Box<dyn Content + 'a>> {
         let wg = WebGPUDevice::new(window).await;
 
         let (render_passes, contents_2d): (Vec<RenderPass>, Vec<Vec<Box<dyn Content>>>) =
-            render_conf.render_passes.into_iter()
+            conf.render_passes.into_iter()
                 .map(|render_pass| RenderPass::new(render_pass, &wg))
                 .collect::<Result<Vec<_>>>()?
                 .into_iter()
                 .unzip();
 
         let mut contents: Vec<Box<dyn Content>> = contents_2d.into_iter().flatten().collect();
-        contents.push(Box::new(WebGPURender { wg, render_passes }));
+        let save_image = conf.save_image.map(SaveImage::new);
+        contents.push(Box::new(WebGPURender { wg, render_passes, save_image }));
 
         Ok(Box::new(CompositeContent { parts: contents }))
     }
 
-    fn render(&self, wg: &WebGPUDevice) {
-        let frame = wg.surface.get_current_texture().expect("Current texture");
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = wg.device
+    fn render(&mut self) {
+        self.render_to_surface();
+
+        self.save_image.iter().for_each(|save_image|
+            save_image.render(self, self.wg.surface_config.width, self.wg.surface_config.height));
+    }
+
+    fn render_to_surface(&self) {
+        let frame = self.wg.surface.get_current_texture().expect("Current texture");
+        let encoder = self.render_to_texture(&frame.texture);
+        self.wg.queue.submit(Some(encoder.finish()));
+        frame.present();
+    }
+
+    fn render_to_texture(&self, texture: &wgpu::Texture) -> wgpu::CommandEncoder {
+        let wg = &self.wg;
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder: wgpu::CommandEncoder = wg.device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         {
             for render_pass in &self.render_passes {
-                render_pass.render(wg, &mut encoder, &view);
+                render_pass.render(wg, &mut encoder, &view, texture.width(), texture.height());
             }
         }
-        wg.queue.submit(Some(encoder.finish()));
-        frame.present();
+        encoder
     }
 }
 
@@ -117,8 +148,7 @@ impl Content for WebGPURender {
     }
 
     fn update(&mut self, _dt: Duration) {
-        let wg = &self.wg;
-        self.render(wg);
+        self.render();
     }
 }
 
@@ -155,9 +185,11 @@ impl RenderPass {
         &self,
         wg: &WebGPUDevice,
         encoder: &mut wgpu::CommandEncoder,
-        view: &wgpu::TextureView
+        view: &wgpu::TextureView,
+        width: u32,
+        height: u32
     ) {
-        let depth = self.depth.as_ref().map(|depth| depth.begin_render_pass(wg));
+        let depth = self.depth.as_ref().map(|depth| depth.begin_render_pass(wg, width, height));
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -172,7 +204,6 @@ impl RenderPass {
             pipeline.render(&mut render_pass);
         }
     }
-
 }
 
 struct Depth {
@@ -190,21 +221,9 @@ impl Depth {
         }
     }
 
-    fn begin_render_pass(&self, wg: &WebGPUDevice) -> RuntimeDepth {
-        let texture = wg.device.create_texture(&wgpu::TextureDescriptor {
-            size: wgpu::Extent3d {
-                width: wg.surface_config.width,
-                height: wg.surface_config.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: self.format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            label: None,
-            view_formats: &[],
-        });
+    fn begin_render_pass(&self, wg: &WebGPUDevice, width: u32, height: u32) -> RuntimeDepth {
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT;
+        let texture = wg.create_texture("Depth", width, height, usage, self.format);
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         RuntimeDepth { _texture: texture, view }
     }
@@ -357,5 +376,130 @@ impl Pipeline {
                 },
             }
         }
+    }
+}
+
+
+//
+// SaveImage, SaveImageData
+
+struct SaveImage {
+    filename: String,
+    data: RefCell<Option<SaveImageData>>,
+}
+
+struct SaveImageData {
+    width: u32,
+    height: u32,
+    texture: wgpu::Texture,
+    buffer: Arc<wgpu::Buffer>,
+    padded_bytes_per_row: u32,
+}
+
+impl SaveImage {
+    fn new(filename: String) -> Self {
+        Self { filename, data: RefCell::new(None) }
+    }
+
+    #[allow(clippy::pattern_type_mismatch)]
+    fn render(&self, renderer: &WebGPURender, width: u32, height: u32) {
+        self.update_data(&renderer.wg, width, height);
+        if let Some(data) = &*self.data.borrow() {
+            data.render(renderer, self.filename.clone());
+        }
+    }
+
+    #[allow(clippy::pattern_type_mismatch)]
+    fn update_data(&self, wg: &WebGPUDevice, width: u32, height: u32) {
+        if let Some(ref data) = &*self.data.borrow() {
+            if data.width == width && data.height == height {
+                return;
+            }
+        }
+
+        *self.data.borrow_mut() = Some(SaveImageData::new(wg, width, height));
+    }
+}
+
+impl SaveImageData {
+    const U32_SIZE: u32 = size_of::<u32>() as u32;
+    const ALIGN: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+
+    fn new(wg: &WebGPUDevice, width: u32, height: u32) -> SaveImageData {
+        let texture = wg.create_texture(
+            "Save as image",
+            width,
+            height,
+            wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
+            wg.texture_format,
+        );
+        let padded_bytes_per_row = ((width * Self::U32_SIZE - 1) / Self::ALIGN + 1) * Self::ALIGN;
+
+        let buffer = Arc::new(wg.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Export"),
+            size: wgpu::BufferAddress::from(padded_bytes_per_row * height),
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        }));
+        SaveImageData {
+            width,
+            height,
+            texture,
+            buffer,
+            padded_bytes_per_row,
+        }
+    }
+
+    fn render(&self, renderer: &WebGPURender, filename: String) {
+        let mut encoder = renderer.render_to_texture(&self.texture);
+
+        encoder.copy_texture_to_buffer(
+            self.texture.as_image_copy(),
+            wgpu::ImageCopyBuffer {
+                buffer: &self.buffer,
+                layout: wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(self.padded_bytes_per_row),
+                    rows_per_image: Some(self.height),
+                },
+            },
+            self.texture.size(),
+        );
+
+        let submission_index = renderer.wg.queue.submit(Some(encoder.finish()));
+
+        let width = self.width;
+        let height = self.height;
+        let padded_bytes_per_row = self.padded_bytes_per_row;
+        let buffer = self.buffer.clone();
+        buffer.clone().slice(..).map_async(wgpu::MapMode::Read, move |_| {
+            let mapped = buffer.slice(..).get_mapped_range();
+            Self::save_image(filename, &mapped, width, height, padded_bytes_per_row);
+            drop(mapped);
+            buffer.unmap();
+        });
+        renderer.wg.device.poll(wgpu::Maintain::WaitForSubmissionIndex(submission_index));
+    }
+
+    #[allow(clippy::indexing_slicing, clippy::identity_op)]
+    fn save_image(filename: String, data: &[u8], width: u32, height: u32, padded_bytes_per_row: u32) {
+        use image::{ImageBuffer, Rgba};
+        let mut pixels = vec![0; (width * height * Self::U32_SIZE) as usize];
+        for r in 0..height {
+            let row_pad = r * padded_bytes_per_row;
+            let row_unpad = r * width * Self::U32_SIZE;
+            for c in 0..width {
+                let pad = (row_pad + c * Self::U32_SIZE) as usize;
+                let unpad = (row_unpad + c * Self::U32_SIZE) as usize;
+                pixels[unpad + 0] = data[pad + 2];
+                pixels[unpad + 1] = data[pad + 1];
+                pixels[unpad + 2] = data[pad + 0];
+                pixels[unpad + 3] = data[pad + 3];
+            }
+        }
+        ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, pixels)
+            .expect("image created")
+            .save(filename)
+            .expect("image saved");
     }
 }
