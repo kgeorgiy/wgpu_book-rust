@@ -3,7 +3,6 @@ use core::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use bytemuck::Pod;
-use wgpu::ShaderStages;
 
 use crate::{BufferInfo, BufferWriter, SmartBufferDescriptor};
 use crate::bindings::{BindGroupVariants, Binding};
@@ -28,7 +27,7 @@ impl Uniforms {
 
     pub fn new(conf: UniformsConfiguration, wg: &WebGPUDevice) -> Self {
         let UniformsConfiguration {uniforms, variants, instances } = conf;
-        let (buffers, declarations): (Vec<SmartBuffer<ShaderStages>>, Vec<String>) =
+        let (buffers, declarations): (Vec<SmartBuffer<wgpu::ShaderStages>>, Vec<String>) =
             uniforms.into_iter()
                 .enumerate()
                 .map(|(index, uniform)| uniform.resolve(wg, index))
