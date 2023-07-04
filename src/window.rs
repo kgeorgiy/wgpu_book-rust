@@ -10,7 +10,7 @@ use crate::{Content, WindowConfiguration};
 use crate::window_api::RawWindow;
 
 pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
-    F: FnOnce(&dyn RawWindow) -> Box<dyn Content>,
+    F: FnOnce(&dyn RawWindow) -> Box<dyn Content<()>>,
 {
     #![allow(clippy::print_stdout, clippy::use_debug)]
 
@@ -22,7 +22,7 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
 
     contents
         .deref_mut()
-        .resize(window.inner_size().width, window.inner_size().height);
+        .resize((), window.inner_size().width, window.inner_size().height);
 
     let render_start_time = std::time::Instant::now();
     event_loop.run(move |event, _, control_flow| {
@@ -31,9 +31,9 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
             Event::WindowEvent { event: window_event, .. } => match window_event {
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 WindowEvent::Resized(size) =>
-                    contents.resize(size.width, size.height),
+                    contents.resize((), size.width, size.height),
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } =>
-                    contents.resize(new_inner_size.width, new_inner_size.height),
+                    contents.resize((), new_inner_size.width, new_inner_size.height),
                 WindowEvent::KeyboardInput { input, .. } => {
                     if input.virtual_keycode == Some(Escape) {
                         *control_flow = ControlFlow::Exit;
@@ -43,8 +43,8 @@ pub fn show<F>(config: &WindowConfiguration, factory: F) -> ! where
                 }
                 _ => (),
             },
-            Event::DeviceEvent { event: input, .. } => contents.input(&input),
-            Event::RedrawRequested(_) => contents.update(render_start_time.elapsed()),
+            Event::DeviceEvent { event: input, .. } => contents.input((), &input),
+            Event::RedrawRequested(_) => contents.update((), render_start_time.elapsed()),
             Event::MainEventsCleared => window.request_redraw(),
             _ => (),
         }

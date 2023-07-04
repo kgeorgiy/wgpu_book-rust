@@ -34,8 +34,8 @@ impl CameraState {
     }
 }
 
-impl Content for MvpController<CameraState> {
-    fn input(&mut self, event: &DeviceEvent) {
+impl Content<()> for MvpController<CameraState> {
+    fn input(&mut self, _context: (), event: &DeviceEvent) {
         self.state.input(event);
         self.set_view(self.state.camera.view());
     }

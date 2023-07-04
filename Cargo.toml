@@ -18,7 +18,7 @@ wgpu = { version = "0.16.1", features = ["expose-ids"] }
 winit = "0.28.6"
 
 [[example]]
-name = "ch00_sheres"
+name = "ch00_spheres"
 path = "examples/ch00/ex_spheres.rs"
 
 [[example]]

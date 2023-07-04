@@ -3,51 +3,52 @@ use core::time::Duration;
 use winit::event::DeviceEvent;
 
 
+//
 // Content
 
-pub trait Content {
-    fn resize(&mut self, _width: u32, _height: u32) {}
-    fn update(&mut self, _dt: Duration) {}
-    fn input(&mut self, _event: &DeviceEvent) {}
+pub trait Content<T> {
+    fn resize(&mut self, _context: T, _width: u32, _height: u32) {}
+    fn update(&mut self, _context: T, _dt: Duration) {}
+    fn input(&mut self, _context: T, _event: &DeviceEvent) {}
 }
 
-
+//
 // NoContent
 
 pub struct NoContent;
 
-impl Content for NoContent {}
+impl<T> Content<T> for NoContent {}
 
 // CompositeContent
 
-pub struct CompositeContent {
-    pub(crate) parts: Vec<Box<dyn Content>>,
+pub struct CompositeContent<T> {
+    pub(crate) parts: Vec<Box<dyn Content<T>>>,
 }
 
-impl<const L: usize> From<[Box<dyn Content>; L]> for CompositeContent {
-    fn from(parts: [Box<dyn Content>; L]) -> Self {
+impl<T, const L: usize> From<[Box<dyn Content<T>>; L]> for CompositeContent<T> {
+    fn from(parts: [Box<dyn Content<T>>; L]) -> Self {
         CompositeContent {
             parts: parts.into(),
         }
     }
 }
 
-impl Content for CompositeContent {
-    fn resize(&mut self, width: u32, height: u32) {
+impl<T: Clone> Content<T> for CompositeContent<T> {
+    fn resize(&mut self, context: T, width: u32, height: u32) {
         for part in &mut self.parts {
-            part.resize(width, height);
+            part.resize(context.clone(), width, height);
         }
     }
 
-    fn update(&mut self, dt: Duration) {
+    fn update(&mut self, context: T, dt: Duration) {
         for part in &mut self.parts {
-            part.update(dt);
+            part.update(context.clone(), dt);
         }
     }
 
-    fn input(&mut self, event: &DeviceEvent) {
+    fn input(&mut self, context: T, event: &DeviceEvent) {
         for part in &mut self.parts {
-            part.input(event);
+            part.input(context.clone(), event);
         }
     }
 }

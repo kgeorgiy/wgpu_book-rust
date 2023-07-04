@@ -3,11 +3,12 @@
 use core::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{Angle, Matrix, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3, Vector4, Zero};
+use cgmath::{Angle, Matrix, Matrix3, Matrix4, Point3, point3, Rad, SquareMatrix, Vector3, Vector4, Zero};
+use winit::event::DeviceEvent;
 
 use webgpu_book::{Configurator, Content, func_box, PipelineConfiguration, To, Uniform, UniformInfo, VertexBufferInfo};
 use webgpu_book::boxed::FuncBox;
-use webgpu_book::transforms::{create_projection, create_rotation};
+use webgpu_book::transforms::{create_projection, create_rotation, invert};
 
 use super::{CmdArgs, VertexN};
 use super::surface_data::Edges;
@@ -49,6 +50,13 @@ impl OglCamera {
         self.projection = create_projection(width as f32 / height as f32, self.fovy);
         self.projection
     }
+
+    pub fn transform(&mut self, transform: Matrix3<f32>) {
+        let forward = self.eye - self.look_at;
+        // let side = forward.cross(self.up);
+        self.eye = self.look_at + transform * forward;
+        self.up = transform * self.up;
+    }
 }
 
 // Light
@@ -56,7 +64,7 @@ impl OglCamera {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 #[must_use]
-pub struct LightUniform{
+pub struct LightUniform {
     position: [f32; 4],
     specular_color: [f32; 4],
     ambient_intensity: f32,
@@ -79,7 +87,6 @@ impl UniformInfo for LightUniform {
     const FUNCTIONS: &'static str = include_str!("light-functions.wgsl");
 }
 
-
 impl LightUniform {
     pub fn new(
         position: Point3<f32>,
@@ -101,9 +108,9 @@ impl LightUniform {
 
     pub fn example() -> LightUniform {
         LightUniform::new(
-            point3(10.0, 0.0, 0.0),
-            point3(1.0, 1.0, 0.0),
-            0.1, 1.0, 2.0, 30.0,
+            point3(10.0, 5.0, -3.0),
+            point3(1.0, 1.0, 1.0),
+            0.1, 1.0, 1.0, 30.0,
         )
     }
 }
@@ -146,7 +153,7 @@ impl To<ModelUniforms> for Model {
     fn to(&self) -> ModelUniforms {
         let model = self.model * self.rotation;
         ModelUniforms {
-            normals: model.invert().expect("invertible matrix").transpose().into(),
+            normals: invert(model).transpose().into(),
             points: model.into(),
         }
     }
@@ -232,7 +239,7 @@ impl LightExamples {
             camera,
             LightUniform::example(),
             aux,
-            1.0
+            Box::new(SawController { animation_speed: 1.0 }),
         )
     }
 
@@ -242,10 +249,10 @@ impl LightExamples {
         camera: OglCamera,
         light: LightUniform,
         aux: AU,
-        animation_speed: f32
+        controller: Box<dyn for<'a> Content<&'a mut UniformsData<ML, AU>>>
     ) -> Configurator<PipelineConfiguration> where OglCamera: To<CU>, AU: UniformInfo, CU: UniformInfo {
         func_box!(move |pipeline: PipelineConfiguration| {
-            Self::configure::<ML, AU, CU>(pipeline, models, instances, camera, light, aux, animation_speed)
+            Self::configure::<ML, AU, CU>(pipeline, models, instances, camera, light, aux, controller)
         })
     }
 
@@ -256,32 +263,33 @@ impl LightExamples {
         camera: OglCamera,
         light: LightUniform,
         aux: AU,
-        animation_speed: f32,
+        controller: Box<dyn for<'a> Content<&'a mut UniformsData<ML, AU>>>
     ) -> PipelineConfiguration where OglCamera: To<CU> {
         let uniforms = pipeline.uniforms();
 
         let unif = Uniforms {
-            models: (
-                if instances {
-                    uniforms
-                        .instances(ML)
-                        .add("Models", models, wgpu::ShaderStages::VERTEX)
-                        .instance_array::<ModelUniforms>()
-                } else {
-                    uniforms
-                        .variants((0..ML).map(|i| vec![i]).collect())
-                        .add("Models", models, wgpu::ShaderStages::VERTEX)
-                        .bindings_array::<ModelUniforms>()
-                }
-            ),
-            camera: uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT)
-                .value::<CU>(),
-            light: uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
-                .value::<LightUniform>(),
-            aux: uniforms.add("Aux", aux, wgpu::ShaderStages::FRAGMENT)
-                .value::<AU>(),
-
-            animation_speed,
+            data: UniformsData {
+                models: (
+                    if instances {
+                        uniforms
+                            .instances(ML)
+                            .add("Models", models, wgpu::ShaderStages::VERTEX)
+                            .instance_array::<ModelUniforms>()
+                    } else {
+                        uniforms
+                            .variants((0..ML).map(|i| vec![i]).collect())
+                            .add("Models", models, wgpu::ShaderStages::VERTEX)
+                            .bindings_array::<ModelUniforms>()
+                    }
+                ),
+                camera: uniforms.add("Camera", camera, wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT)
+                    .value::<CU>(),
+                light: uniforms.add("Light", light, wgpu::ShaderStages::FRAGMENT)
+                    .value::<LightUniform>(),
+                aux: uniforms.add("Aux", aux, wgpu::ShaderStages::FRAGMENT)
+                    .value::<AU>(),
+            },
+            controller,
         };
         pipeline.add_listener(Box::new(unif));
         pipeline
@@ -292,44 +300,34 @@ impl LightExamples {
     }
 }
 
+//
 // Uniforms
 
 #[allow(dead_code)]
-pub struct Uniforms<const ML: usize, A: Pod> {
-    models: Uniform<[Model; ML]>,
-    camera: Uniform<OglCamera>,
-    light: Uniform<LightUniform>,
-    aux: Uniform<A>,
-
-    animation_speed: f32,
+pub struct Uniforms<const ML: usize, A> {
+    data: UniformsData<ML, A>,
+    controller: Box<dyn for<'a> Content<&'a mut UniformsData<ML, A>>>,
 }
 
-impl<const ML: usize, AU: Pod> Content for Uniforms<ML, AU> {
-    fn resize(&mut self, width: u32, height: u32) {
-        self.camera.as_mut().resize(width, height);
-    }
-
-    fn update(&mut self, dt: Duration) {
-        let time = self.animation_speed * dt.as_secs_f32();
-        let (angle_sin, angle_cos) = (Rad::full_turn() * time / 5.0).sin_cos();
-        let rotation = create_rotation([
-            Rad::full_turn() * angle_sin / 2.0,
-            Rad::full_turn() * angle_cos / 2.0,
-            Rad::zero()
-        ]);
-
-        for model in self.models.as_mut().iter_mut() {
-            model.rotation = rotation;
-        }
-
-        self.light.as_mut().ambient_intensity = Self::saw(time / 4.0);
-        self.camera.as_mut().eye.z = 3.0 + Self::saw(time / 6.0) * 10.0;
-    }
+pub struct UniformsData<const ML: usize, A> {
+    pub(crate) models: Uniform<[Model; ML]>,
+    pub(crate) camera: Uniform<OglCamera>,
+    pub(crate) light: Uniform<LightUniform>,
+    pub(crate) aux: Uniform<A>,
 }
 
-impl<AU: Pod, const ML: usize> Uniforms<ML, AU> {
-    fn saw(time: f32) -> f32 {
-        (time % 1.0 - 0.5).abs() * 2.0
+impl<const ML: usize, AU: Pod> Content<()> for Uniforms<ML, AU> {
+    fn resize(&mut self, _context: (), width: u32, height: u32) {
+        self.data.camera.as_mut().resize(width, height);
+        self.controller.resize(&mut self.data, width, height);
+    }
+
+    fn update(&mut self, _context: (), dt: Duration) {
+        self.controller.update(&mut self.data, dt);
+    }
+
+    fn input(&mut self, _context: (), event: &DeviceEvent) {
+        self.controller.input(&mut self.data, event);
     }
 }
 
@@ -372,5 +370,39 @@ impl TwoSideLight {
 
     pub fn read_args() -> Configurator<PipelineConfiguration> {
         LightExamples::aux(Self::new(CmdArgs::next_bool("Is two side", false)))
+    }
+}
+
+//
+// UniformListener
+
+struct SawController<const ML: usize> {
+    animation_speed: f32,
+}
+
+impl<const ML: usize, AU> Content<&mut UniformsData<ML, AU>> for SawController<ML> {
+    fn update(&mut self, context: &mut UniformsData<ML, AU>, dt: Duration) {
+        let time = self.animation_speed * dt.as_secs_f32();
+        let (angle_sin, angle_cos) = (Rad::full_turn() * time / 5.0).sin_cos();
+        let rotation = create_rotation([
+            Rad::full_turn() * angle_sin / 20.0,
+            Rad::full_turn() * angle_cos / 20.0,
+            Rad::zero()
+        ]);
+
+        for model in context.models.as_mut().iter_mut() {
+            model.rotation = rotation;
+        }
+
+        let mut light = context.light.as_mut();
+        light.ambient_intensity = Self::saw(time / 4.0);
+        light.position = (point3(angle_sin, angle_cos, 0.0) * 10.0).to_homogeneous().into();
+        // self.camera.as_mut().eye.z = 25.0 + Self::saw(time / 6.0) * 3.0;
+    }
+}
+
+impl<const ML: usize> SawController<ML> {
+    fn saw(time: f32) -> f32 {
+        (time % 1.0 - 0.5).abs() * 2.0
     }
 }

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use core::cell::RefCell;
+use core::{cell::RefCell, str::FromStr, fmt::Debug};
 
 pub use vertex::*;
 
@@ -26,6 +26,7 @@ impl CmdArgs {
     pub fn next_known(description: &str, known: &[&str]) -> String {
         let value = Self::next(known.first().expect("at least one known variant"));
         assert!(known.iter().any(|k| value == *k), "{description}: unknown argument '{value}', expected one of {known:?}");
+        println!("{description}: {value}");
         value
     }
 
@@ -33,6 +34,35 @@ impl CmdArgs {
     pub fn next_bool(description: &str, default: bool) -> bool {
         let known = if default { ["true", "false"] } else { ["false", "true"] };
         CmdArgs::next_known(description, &known).parse().expect("true of false")
+    }
+
+    #[must_use]
+    pub fn has_option(name: &str) -> bool {
+        ARGS.with(|cell| {
+            let mut args = cell.borrow_mut();
+            let index = args.iter().position(|value| value == name);
+            for idx in index.iter() { args.remove(*idx); }
+            println!("Has {name}: {}", index.is_some());
+            index.is_some()
+        })
+    }
+
+    #[must_use]
+    pub fn get_option<F: FromStr>(name: &str) -> Option<F> where <F as FromStr>::Err: Debug {
+        ARGS.with(|cell| {
+            let mut args = cell.borrow_mut();
+            let index = args.iter().position(|value| value == name);
+            index.map(|idx| {
+                if idx > 0 {
+                    let value = args.remove(idx - 1);
+                    args.remove(idx - 1);
+                    println!("{name}: {value}");
+                    value.parse().expect("valid value")
+                } else {
+                    panic!("{name} expects argument");
+                }
+            })
+        })
     }
 
     pub(crate) fn is(expected: &str) -> bool {

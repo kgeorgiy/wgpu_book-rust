@@ -24,11 +24,24 @@ pub struct RenderConfiguration {
 }
 
 impl RenderConfiguration {
-    pub fn new(passes: Vec<RenderPassConfiguration>) -> Self {
-        Self { render_passes: passes, save_image: None }
+    pub fn new() -> Self {
+        Self { render_passes: vec![], save_image: None }
     }
 
-    pub fn save_images_as(mut self, filename: &str) -> Self {
+    #[allow(clippy::indexing_slicing)]
+    pub fn new_pass(&mut self, pipelines: Vec<PipelineConfiguration>) -> &mut RenderPassConfiguration {
+        let pass = RenderPassConfiguration::new(pipelines);
+        self.render_passes.push(pass);
+        let last = self.render_passes.len() - 1;
+        &mut self.render_passes[last]
+    }
+
+    pub fn add_pass(&mut self, pass: RenderPassConfiguration) -> &mut Self {
+        self.render_passes.push(pass);
+        self
+    }
+
+    pub fn save_images_as(&mut self, filename: &str) -> &mut Self {
         self.save_image = Some(filename.to_owned());
         self
     }
@@ -37,6 +50,13 @@ impl RenderConfiguration {
         run_wgpu(&WindowConfiguration { title }, self);
     }
 }
+
+impl Default for RenderConfiguration {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 //
 // RenderPassConfiguration
@@ -50,7 +70,9 @@ pub struct RenderPassConfiguration {
 
 impl RenderPassConfiguration {
     pub fn run_title(self, title: &str) -> ! {
-        RenderConfiguration::new(vec![self]).run_title(title)
+        let mut render = RenderConfiguration::new();
+        render.add_pass(self);
+        render.run_title(title)
     }
 
     pub fn new(pipelines: Vec<PipelineConfiguration>) -> Self {
@@ -61,12 +83,12 @@ impl RenderPassConfiguration {
         }
     }
 
-    pub fn with_load(mut self, load: wgpu::LoadOp<wgpu::Color>) -> Self {
+    pub fn with_load(&mut self, load: wgpu::LoadOp<wgpu::Color>) -> &mut Self {
         self.load = load;
         self
     }
 
-    pub fn with_depth(mut self, format: Option<wgpu::TextureFormat>) -> Self {
+    pub fn with_depth(&mut self, format: Option<wgpu::TextureFormat>) -> &mut Self {
         self.depth = format.map(|frm| DepthConfiguration { format: frm });
         self
     }
@@ -85,7 +107,7 @@ pub struct PipelineConfiguration {
     vertices: Vec<(SmartBufferDescriptor<wgpu::VertexBufferLayout<'static>>, String)>,
     indices: Option<SmartBufferDescriptor<wgpu::IndexFormat>>,
     uniforms: UniformsConfiguration,
-    listeners: Vec<Box<dyn Content>>,
+    listeners: Vec<Box<dyn Content<()>>>,
     textures: Vec<TextureInfo>,
 }
 
@@ -170,7 +192,7 @@ impl PipelineConfiguration {
         self
     }
 
-    pub fn add_listener(&mut self, listener: Box<dyn Content>) -> &mut Self {
+    pub fn add_listener(&mut self, listener: Box<dyn Content<()>>) -> &mut Self {
         self.listeners.push(listener);
         self
     }

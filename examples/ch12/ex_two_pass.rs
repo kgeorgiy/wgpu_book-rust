@@ -1,5 +1,6 @@
 use cgmath::point3;
-use webgpu_book::{RenderConfiguration, RenderPassConfiguration};
+
+use webgpu_book::RenderConfiguration;
 
 use crate::common::{edges_pipeline, VertexNC};
 use crate::common::colormap::Colormap;
@@ -24,10 +25,8 @@ fn main() -> ! {
 
     let axes = edges_pipeline(surface.axes(2.5));
 
-    RenderConfiguration::new(vec![
-        RenderPassConfiguration::new(vec![faces]),
-        RenderPassConfiguration::new(vec![edges, axes])
-            .with_load(wgpu::LoadOp::Load),
-    ])
-        .run_title(format!("Chapter 12. Two-pass rendering ({})", surface.name()).as_str())
+    let mut render = RenderConfiguration::new();
+    render.new_pass(vec![faces]);
+    render.new_pass(vec![edges, axes]).with_load(wgpu::LoadOp::Load);
+    render.run_title(format!("Chapter 12. Two-pass rendering ({})", surface.name()).as_str())
 }

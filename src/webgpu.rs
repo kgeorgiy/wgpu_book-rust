@@ -10,6 +10,8 @@ use crate::{CompositeContent, Content, PipelineConfiguration, RawWindow, RenderC
 use crate::bindings::Textures;
 use crate::uniforms::Uniforms;
 
+type ContentBox = Box<dyn Content<()>>;
+
 pub(crate) struct WebGPUDevice {
     surface: wgpu::Surface,
     surface_config: wgpu::SurfaceConfiguration,
@@ -85,29 +87,35 @@ pub(crate) struct WebGPURender {
     wg: WebGPUDevice,
     render_passes: Vec<RenderPass>,
     save_image: Option<SaveImage>,
+    prev_duration: f32,
 }
 
 impl WebGPURender {
-    pub fn content<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content + 'a>> {
+    pub fn content<'a>(window: &dyn RawWindow, conf: RenderConfiguration) -> Result<Box<dyn Content<()> + 'a>> {
         pollster::block_on(Self::content_async(window, conf))
     }
 
     pub async fn content_async<'a>(
         window: &dyn RawWindow,
         conf: RenderConfiguration,
-    ) -> Result<Box<dyn Content + 'a>> {
+    ) -> Result<Box<dyn Content<()> + 'a>> {
         let wg = WebGPUDevice::new(window).await;
 
-        let (render_passes, contents_2d): (Vec<RenderPass>, Vec<Vec<Box<dyn Content>>>) =
+        let (render_passes, contents_2d): (Vec<RenderPass>, Vec<Vec<ContentBox>>) =
             conf.render_passes.into_iter()
                 .map(|render_pass| RenderPass::new(render_pass, &wg))
                 .collect::<Result<Vec<_>>>()?
                 .into_iter()
                 .unzip();
 
-        let mut contents: Vec<Box<dyn Content>> = contents_2d.into_iter().flatten().collect();
+        let mut contents: Vec<ContentBox> = contents_2d.into_iter().flatten().collect();
         let save_image = conf.save_image.map(SaveImage::new);
-        contents.push(Box::new(WebGPURender { wg, render_passes, save_image }));
+        contents.push(Box::new(WebGPURender {
+            wg,
+            render_passes,
+            save_image,
+            prev_duration: 0.0,
+        }));
 
         Ok(Box::new(CompositeContent { parts: contents }))
     }
@@ -140,14 +148,17 @@ impl WebGPURender {
     }
 }
 
-impl Content for WebGPURender {
-    fn resize(&mut self, width: u32, height: u32) {
+impl Content<()> for WebGPURender {
+    fn resize(&mut self, _context: (), width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.wg.resize(width, height);
         }
     }
 
-    fn update(&mut self, _dt: Duration) {
+    fn update(&mut self, _context: (), dt: Duration) {
+        let now = dt.as_secs_f32();
+        println!("{:.1} fps", 1.0 / (now - self.prev_duration));
+        self.prev_duration = now;
         self.render();
     }
 }
@@ -163,10 +174,10 @@ struct RenderPass {
 
 impl RenderPass {
     fn new(conf: RenderPassConfiguration, wg: &WebGPUDevice)
-        -> Result<(RenderPass, Vec<Box<dyn Content>>)>
+        -> Result<(RenderPass, Vec<ContentBox>)>
     {
         let depth = conf.depth.map(|depth_conf| Depth { format: depth_conf.format });
-        let (pipelines, listeners): (Vec<Pipeline>, Vec<Vec<Box<dyn Content>>>) =
+        let (pipelines, listeners): (Vec<Pipeline>, Vec<Vec<ContentBox>>) =
             conf.pipelines.into_iter()
                 .map(|pipeline| Pipeline::new(
                     pipeline,
@@ -265,7 +276,7 @@ impl Pipeline {
         conf: PipelineConfiguration,
         wg: &WebGPUDevice,
         depth_stencil: Option<wgpu::DepthStencilState>
-    ) -> Result<(Pipeline, Vec<Box<dyn Content>>)> {
+    ) -> Result<(Pipeline, Vec<ContentBox>)> {
         let (vertex_buffers, vertex_decls): (Vec<SmartBuffer<wgpu::VertexBufferLayout>>, Vec<String>) =
             conf.vertices.into_iter()
                 .map(|(descriptor, decl)|

@@ -1,15 +1,18 @@
-use cgmath::{Matrix4, Point3, Rad, Vector3, Zero};
+use cgmath::{Matrix4, Point3, Rad, SquareMatrix, Vector3, Zero};
 
 pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
-    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
+    1.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 0.5, 0.0,
+    0.0, 0.0, 0.5, 1.0,
 );
 
 #[must_use] pub fn create_projection(aspect: f32, fovy: Rad<f32>) -> Matrix4<f32> {
     let project = if fovy > Rad::zero() {
-        cgmath::perspective(fovy, aspect, 0.1, 100.0)
+        cgmath::perspective(fovy, aspect, 0.1, 10.0)
     } else {
         let view = 1.5;
-        cgmath::ortho(-view * aspect, view * aspect, -view, view, 0.0, 100.0)
+        cgmath::ortho(-view * aspect, view * aspect, -view, view, 0.0, 10.0)
     };
 
     OPENGL_TO_WGPU_MATRIX * project
@@ -36,4 +39,12 @@ pub fn create_transforms(
     let rot = create_rotation(rotation.map(Rad));
     let scale = Matrix4::from_nonuniform_scale(scaling[0], scaling[1], scaling[2]);
     trans * rot * scale
+}
+
+#[must_use]
+pub fn invert(matrix: Matrix4<f32>) -> Matrix4<f32>{
+    matrix
+        .cast::<f64>().expect("successful cast f32 -> f64")
+        .invert().expect("non-degenerate")
+        .cast::<f32>().expect("successful cast f64 -> f32")
 }

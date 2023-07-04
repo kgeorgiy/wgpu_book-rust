@@ -3,3 +3,4 @@ __*
 *.iml
 .cargo
 Cargo.lock
+*.cif
